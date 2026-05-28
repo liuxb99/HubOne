@@ -75,12 +75,14 @@ export function pptReducer(state: PPTDocument, action: Action): PPTDocument {
     }
 
     // ── 載入文件 ───────────────────────────────────────────────────────
-    case "LOAD_DOCUMENT":
+    case "LOAD_DOCUMENT": {
       return { ...action.payload, updatedAt: now };
+      }
 
     // ── 設定標題 ───────────────────────────────────────────────────────
-    case "SET_TITLE":
+    case "SET_TITLE": {
       return { ...state, title: action.payload, updatedAt: now };
+      }
 
     // ── 新增投影片 ─────────────────────────────────────────────────────
     case "ADD_SLIDE": { const now = Date.now();
@@ -123,8 +125,9 @@ export function pptReducer(state: PPTDocument, action: Action): PPTDocument {
     }
 
     // ── 選取投影片（僅更新 slide 順序，觸發 editorState 更新由 provider 處理）─
-    case "SELECT_SLIDE":
-      return { ...state }; // 由外部 hook 處理 currentSlideId
+    case "SELECT_SLIDE": {
+      return { ...state };
+      } // 由外部 hook 處理 currentSlideId
 
     // ── 重新排序投影片 ─────────────────────────────────────────────────
     case "REORDER_SLIDES": { const now = Date.now();
@@ -279,8 +282,9 @@ type EditorAction =
 
 function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
-    case "SET_CURRENT_SLIDE":
+    case "SET_CURRENT_SLIDE": {
       return { ...state, currentSlideId: action.payload, selectedElementIds: [] };
+      }
 
     case "SELECT_ELEMENT": {
       const { elementId, multi } = action.payload;
@@ -296,14 +300,17 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, selectedElementIds: [elementId] };
     }
 
-    case "DESELECT_ALL":
+    case "DESELECT_ALL": {
       return { ...state, selectedElementIds: [] };
+      }
 
-    case "SET_ZOOM":
+    case "SET_ZOOM": {
       return { ...state, zoom: Math.max(25, Math.min(200, action.payload)) };
+      }
 
-    case "START_PRESENT":
+    case "START_PRESENT": {
       return { ...state, isPresenting: true, currentPresentIndex: 0 };
+      }
 
     case "NEXT_SLIDE": {
       const next = Math.min(state.currentPresentIndex + 1, action.payload.total - 1);
@@ -315,8 +322,9 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, currentPresentIndex: prev };
     }
 
-    case "END_PRESENT":
+    case "END_PRESENT": {
       return { ...state, isPresenting: false, currentPresentIndex: 0 };
+      }
 
     default:
       return state;
