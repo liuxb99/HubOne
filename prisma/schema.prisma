@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+  
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用戶 ====================
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 關聯
+  gameScores   GameScore[]
+  messages     Message[]    @relation("SentMessages")
+  receivedMsgs Message[]    @relation("ReceivedMessages")
+}
+
+// ==================== 遊戲排行榜 ====================
+model GameScore {
+  id        String   @id @default(cuid())
+  userId    String
+  game      String   // tetris, snake, minesweeper, game2048, breakout, pacman, invaders, flappybird, memory, shooter
+  score     Int
+  level     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([game, score])
+  @@index([userId])
+}
+
+// ==================== 站內訊息（二手交易用） ====================
+model Message {
+  id        String   @id @default(cuid())
+  fromId    String
+  toId      String
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  from User @relation("SentMessages", fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("ReceivedMessages", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId, toId])
+}

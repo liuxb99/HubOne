@@ -1,26 +1,452 @@
 @import "tailwindcss";
 
+/* ==================== Tailwind CSS v4 設計標記 ====================
+   透過 @theme 註冊的 token 可直接使用 utility classes，例如：
+   bg-brand, text-quant, rounded-md, shadow-lg, p-4, font-sans 等
+   ================================================================ */
+@theme {
+  /* ── 品牌色 ── */
+  --color-brand: #6366F1;
+  --color-brand-light: #818CF8;
+  --color-brand-dark: #4F46E5;
+
+  /* ── 六大事業體色彩 ── */
+  --color-quant: #00C853;
+  --color-civil: #FF6D00;
+  --color-market: #E91E63;
+  --color-ai: #8B5CF6;
+  --color-ppt: #EC4899;
+  --color-game: #FF6B35;
+
+  /* ── 功能色 ── */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+  --color-info-light: #60A5FA;
+
+  /* ── 語意別名（動態跟隨主題） ── */
+  --color-surface: var(--bg-secondary);
+  --color-border: var(--border);
+  --color-accent: var(--theme-color, var(--brand));
+
+  /* ── 字體家族 ── */
+  --font-sans: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── 字級（桌面基準） ── */
+  --text-display: 48px;
+  --text-h1: 36px;
+  --text-h2: 28px;
+  --text-h3: 22px;
+  --text-h4: 18px;
+  --text-body: 16px;
+  --text-sm: 14px;
+  --text-xs: 12px;
+  --text-data-lg: 32px;
+  --text-data: 14px;
+
+  /* ── 字重 ── */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ── 行高 ── */
+  --leading-heading: 1.2;
+  --leading-body: 1.6;
+  --leading-data: 1;
+
+  /* ── 間距（4px 基數） ── */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+  --spacing-9: 36px;
+  --spacing-10: 40px;
+  --spacing-11: 44px;
+  --spacing-12: 48px;
+  --spacing-14: 56px;
+  --spacing-16: 64px;
+  --spacing-18: 72px;
+  --spacing-20: 80px;
+
+  /* ── 圓角 ── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ── 陰影 ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* ==================== Design System Tokens ==================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 品牌色 */
+  --brand: #6366F1;
+  --brand-light: #818CF8;
+  --brand-dark: #4F46E5;
+
+  /* 六大事業體色彩 */
+  --quant: #00C853;
+  --civil: #FF6D00;
+  --market: #E91E63;
+  --ai: #8B5CF6;
+  --ppt: #EC4899;
+  --game: #FF6B35;
+
+  /* 業務線對應輔色 */
+  --quant-secondary: #1A237E;
+  --civil-secondary: #37474F;
+  --market-secondary: #00BCD4;
+  --ai-secondary: #06B6D4;
+  --ppt-secondary: #FCD34D;
+  --game-secondary: #00FFF7;
+
+  /* 淺色主題 */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F9FA;
+  --bg-tertiary: #F1F3F5;
+  --text-primary: #1A1A2E;
+  --text-secondary: #71717A;
+  --text-tertiary: #A1A1AA;
+  --border: #E4E4E7;
+  --border-light: #F0F0F3;
+  --card-bg: #FFFFFF;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* 功能色 */
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
+
+  /* 字體 */
+  --font-sans: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* 圓角體系 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 陰影層級 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+  /* 間距系統（4px 基數） */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-18: 72px;
+  --space-20: 80px;
+
+  /* 字級系統 */
+  --text-display: 48px;
+  --text-h1: 36px;
+  --text-h2: 28px;
+  --text-h3: 22px;
+  --text-h4: 18px;
+  --text-body: 16px;
+  --text-sm: 14px;
+  --text-xs: 12px;
+  --text-data-lg: 32px;
+  --text-data: 14px;
+
+  /* 行高 */
+  --leading-heading: 1.2;
+  --leading-body: 1.6;
+  --leading-data: 1;
+
+  /* 主題色（預設為品牌色，由業務線覆蓋） */
+  --theme-color: var(--brand);
+  --theme-color-secondary: var(--brand-light);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 深色主題 */
+.dark {
+  --bg-primary: #0A0A0B;
+  --bg-secondary: #18181B;
+  --bg-tertiary: #1F1F23;
+  --text-primary: #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-tertiary: #71717A;
+  --border: #27272A;
+  --border-light: #1F1F23;
+  --card-bg: #18181B;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ==================== 全域樣式 ==================== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==================== 選取顏色 ==================== */
+::selection {
+  background-color: var(--brand-light);
+  color: #FFFFFF;
+}
+
+/* ==================== 滾動條 ==================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* ==================== 動畫 ==================== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(99, 102, 241, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.5); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ==================== 毛玻璃效果 ==================== */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.dark .glass {
+  background: rgba(10, 10, 11, 0.7);
+}
+
+/* ==================== 過渡輔助 ==================== */
+.theme-transition {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ==================== 業務線主題 ==================== */
+
+/* --- 📊 量化交易：深色金融風格 --- */
+[data-theme="quant"] {
+  --theme-color: var(--quant);
+  --theme-color-secondary: var(--quant-secondary);
+  --bg-primary: #0D1117;
+  --bg-secondary: #161B22;
+  --bg-tertiary: #1C2128;
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-tertiary: #6E7681;
+  --border: #30363D;
+  --border-light: #21262D;
+  --card-bg: #1C2128;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --success: #00C853;
+  --error: #FF1744;
+}
+
+/* --- 🏗️ 土木結構：淺色專業工具風格 --- */
+[data-theme="civil"] {
+  --theme-color: var(--civil);
+  --theme-color-secondary: var(--civil-secondary);
+  --bg-primary: #F5F5F0;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #EEEEEE;
+  --text-primary: #263238;
+  --text-secondary: #546E7A;
+  --text-tertiary: #90A4AE;
+  --border: #D7CCC8;
+  --border-light: #EFEBE9;
+  --card-bg: #FFFFFF;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* --- 🛒 二手交易：淺色活潑電商風格 --- */
+[data-theme="market"] {
+  --theme-color: var(--market);
+  --theme-color-secondary: var(--market-secondary);
+  --bg-primary: #FFF5F7;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #FFF0F3;
+  --text-primary: #2D1B2E;
+  --text-secondary: #7A4B5C;
+  --text-tertiary: #B2869C;
+  --border: #F5D6DE;
+  --border-light: #FCE8EE;
+  --card-bg: #FFFFFF;
+  --card-shadow: 0 1px 3px rgba(233, 30, 99, 0.06), 0 1px 2px rgba(233, 30, 99, 0.04);
+}
+
+/* --- 🤖 AI 工具：深色科技簡潔風格 --- */
+[data-theme="ai"] {
+  --theme-color: var(--ai);
+  --theme-color-secondary: var(--ai-secondary);
+  --bg-primary: #0F0F12;
+  --bg-secondary: #1A1A2E;
+  --bg-tertiary: #22223A;
+  --text-primary: #F0F0FF;
+  --text-secondary: #A0A0C0;
+  --text-tertiary: #707090;
+  --border: #2A2A45;
+  --border-light: #1F1F35;
+  --card-bg: #1A1A2E;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --info: #06B6D4;
+}
+
+/* --- 📽️ 線上 PPT：明亮創意編輯器風格 --- */
+[data-theme="ppt"] {
+  --theme-color: var(--ppt);
+  --theme-color-secondary: var(--ppt-secondary);
+  --bg-primary: #FAFAFA;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #F5F5F5;
+  --text-primary: #1C1C1E;
+  --text-secondary: #6E6E78;
+  --text-tertiary: #AEAEB2;
+  --border: #E5E5EA;
+  --border-light: #F2F2F7;
+  --card-bg: #FFFFFF;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* --- 🎮 經典遊戲：深紫復古風格 --- */
+[data-theme="game"] {
+  --theme-color: var(--game);
+  --theme-color-secondary: var(--game-secondary);
+  --bg-primary: #1A0A2E;
+  --bg-secondary: #261244;
+  --bg-tertiary: #301A50;
+  --text-primary: #FFFFFF;
+  --text-secondary: #C0A0E0;
+  --text-tertiary: #8060A0;
+  --border: #3D2260;
+  --border-light: #2E1848;
+  --card-bg: #261244;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --success: #00FFF7;
+  --warning: #FFE600;
+  --error: #FF0055;
+}
+
+/* ==================== 列印樣式 ==================== */
+@media print {
+  nav,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 12pt;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+}
+
+/* ==================== 無障礙：減少動畫 ==================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

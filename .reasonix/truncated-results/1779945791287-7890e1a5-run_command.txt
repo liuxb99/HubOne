@@ -1,0 +1,506 @@
+$ findstr /n "for\|while\|let c " src\lib\civil\beam.ts
+[exit 0]
+14:import { type HBeam, findHBeam } from './section';
+17:export type SupportType = 'simply' | 'fixed' | 'cantilever';
+20:export interface BeamLoad {
+32:  direction?: 'up' | 'down';
+40:export interface RCBeamReinforcement {
+44:  As_compression: number;
+50:  bars_compression: string[];
+54:  spacing: number;
+76:export interface ContinuousSpan {
+86:export interface ContinuousBeamResult {
+94:    reactions: { left: number; right: number };
+114:export interface BeamResult {
+120:  reactions: { left: number; right: number };
+126:  maxDeflection: number;
+132:  deflectionPoints: { x: number; d: number }[];
+134:  section?: HBeam;
+135:  /** 所需斷面模數 (cm³) */
+142:  rcResult?: RCBeamReinforcement;
+144:  continuousResult?: ContinuousBeamResult;
+148:const E = 205_000; // 鋼彈性模數 (MPa = N/mm²)
+149:const SAFETY_FACTOR = 1.5; // 容許應力設計法安全係數
+150:const FY = 245; // 鋼材降伏強度 (MPa, SN400B/SM490 常用)
+151:const ALLOWABLE_STRESS = FY / SAFETY_FACTOR; // 容許彎曲應力 (MPa)
+154:const Es = 200_000;
+157:const yieldStressMap: Record<string, number> = {
+172: * @param section  - 可選的 H 型鋼斷面
+176:export function calcBeam(
+180:  section?: HBeam,
+187:  const fy = yieldStressMap[steelGrade] ?? 245;
+188:  const allowableStress = fy / SAFETY_FACTOR;
+191:  const reactions = calcReactions(length, supportType, loads);
+194:  const nPoints = 50;
+195:  const step = length / (nPoints - 1);
+197:  const shearPoints: { x: number; v: number }[] = [];
+198:  const momentPoints: { x: number; m: number }[] = [];
+199:  const deflectionPoints: { x: number; d: number }[] = [];
+202:    const x = i * step;
+203:    const v = calcShearAt(x, length, supportType, loads, reactions);
+204:    const m = calcMomentAt(x, length, supportType, loads, reactions);
+205:    const d = calcDeflectionAt(x, length, supportType, loads, reactions);
+209:    deflectionPoints.push({ x: round(x), d: round(d) });
+213:  const maxMoment = Math.max(...momentPoints.map((p) => Math.abs(p.m)));
+214:  const maxShear = Math.max(...shearPoints.map((p) => Math.abs(p.v)));
+215:  const maxDeflection = Math.max(...deflectionPoints.map((p) => Math.abs(p.d)));
+220:  // Zx (cm³) → mm³ = * 10³
+222:  const requiredZx = (maxMoment * 1_000_000) / (allowableStress * 1_000); // cm³
+227:  if (section) {
+228:    const actualStress = (maxMoment * 1_000_000) / (section.Zx * 1_000); // MPa
+229:    safetyRatio = actualStress / allowableStress;
+236:    reactions: {
+237:      left: round(reactions.left),
+238:      right: round(reactions.right),
+242:    maxDeflection: round(maxDeflection),
+245:    deflectionPoints,
+246:    section,
+257:const COVER_DEFAULT = 40; // mm 保護層厚度
+258:const DS_DEFAULT = 10; // mm 箍筋直徑
+259:const DB_DEFAULT = 25; // mm 主筋直徑預設
+264: * β1 = 0.85 for fc ≤ 28 MPa
+265: * β1 = 0.85 - 0.05 × (fc - 28)/7  for 28 < fc ≤ 55 MPa
+268:export function calcBeta1(fc: number): number {
+269:  if (fc <= 28) return 0.85;
+270:  const beta1 = 0.85 - 0.05 * ((fc - 28) / 7);
+278: * @param cover - 保護層厚度 (mm)
+283:export function calcEffectiveDepth(
+285:  cover: number = COVER_DEFAULT,
+289:  return h - cover - ds - db / 2;
+295: * 迭代求解中性軸深度 c，計算拉力筋面積 As，
+302: * @param fc - 混凝土抗壓強度 (MPa)
+304: * @returns RCBeamReinforcement
+306:export function calcRCBeam(
+311:  fc: number,
+313:): RCBeamReinforcement {
+315:  const cover = COVER_DEFAULT;
+316:  const ds = DS_DEFAULT;
+317:  const db = DB_DEFAULT;
+318:  const d = calcEffectiveDepth(h, cover, ds, db);
+319:  const d_prime = cover + ds + db / 2; // 壓力筋深度
+321:  const beta1 = calcBeta1(fc);
+322:  const epsilon_cu = 0.003; // 混凝土極限壓應變 (ACI 318-19 §22.2.2.1)
+323:  const epsilon_y = fy / Es; // 鋼筋降伏應變
+326:  const rho_min = Math.max((0.25 * Math.sqrt(fc)) / fy, 1.4 / fy);
+328:  // ── 平衡筋比 ρ_balance ──
+329:  // ρb = 0.85×β1×fc/fy × (0.003/(0.003+εy))
+330:  const rho_balance =
+331:    (0.85 * beta1 * fc * epsilon_cu) / (fy * (epsilon_cu + epsilon_y));
+334:  // 拉力控制時：c/dt = εc/(εc+εt) = 0.003/(0.003+0.005) = 0.375
+335:  // ρ_max = 0.85×β1×fc/fy × c/dt = 0.85×β1×fc/fy × 0.375
+336:  const rho_max = (0.85 * beta1 * fc * 0.375) / fy;
+340:  let As_compression = 0;
+341:  let c = 0.1 * d; // 初始猜值
+345:  const maxIter = 100;
+346:  const tol = 0.01;
+350:    const a = beta1 * c; // 等效應力塊深度
+351:    const eps_t = epsilon_cu * (d - c) / c; // 拉力筋應變
+370:    const Mu_Nmm = Mu * 1e6;
+371:    const As_needed = Mu_Nmm / (phi * fy * (d - a / 2));
+375:    const As_max_allowed = rho_max * b * d;
+382:      const a_max = As_tension * fy / (0.85 * fc * b);
+383:      const Mn_tension = As_tension * fy * (d - a_max / 2); // N·mm
+386:      const Mn_remaining = Math.max(0, Mu_Nmm / phi - Mn_tension);
+389:        As_compression = Mn_remaining / (fy * (d - d_prime));
+390:        const eps_prime = epsilon_cu * (c - d_prime) / c;
+393:          const fs_prime = eps_prime * Es;
+394:          As_compression = Mn_remaining / (fs_prime * (d - d_prime));
+399:      As_compression = 0;
+403:    // C = 0.85×fc×a×b
+405:    // C' = As_compression × fs'
+406:    let C = 0.85 * fc * a * b;
+409:    if (As_compression > 0) {
+410:      const eps_prime = epsilon_cu * (c - d_prime) / c;
+411:      const fs_prime = Math.min(eps_prime * Es, fy);
+412:      C_prime = As_compression * fs_prime;
+414:    const c_new = (T + C_prime - C) / (0.85 * fc * beta1 * b) + c; // 牛頓法近似
+416:    // 0.85×fc×β1×c×b - As_compression×fs' = As_tension×fy
+417:    // 但 fs' 也與 c 有關，故迭代求解
+418:    // 此處用簡化方式計算新 c
+419:    if (As_compression > 0) {
+420:      const eps_prime = epsilon_cu * (c - d_prime) / c;
+421:      const fs_prime = Math.min(eps_prime * Es, fy);
+422:      // 0.85×fc×β1×c×b + As_compression×fs' - As_tension×fy = 0
+424:      const f_c = 0.85 * fc * beta1 * c * b + As_compression * fs_prime - As_tension * fy;
+425:      // df/dc ≈ 0.85×fc×β1×b + As_compression × (Es×epsilon_cu×d_prime)/c²
+426:      const df =
+427:        0.85 * fc * beta1 * b +
+428:        (eps_prime < epsilon_y ? (As_compression * Es * epsilon_cu * d_prime) / (c * c) : 0);
+430:        const c_newton = c - f_c / df;
+431:        c = Math.max(d_prime + 1, Math.min(d, c_newton));
+434:      // 單筋斷面：c = As×fy / (0.85×fc×β1×b)
+435:      c = (As_tension * fy) / (0.85 * fc * beta1 * b);
+439:    if (Math.abs(c - c_old) / Math.max(c, 1) < tol) break;
+443:  const a_final = beta1 * c;
+444:  const eps_t_final = epsilon_cu * (d - c) / c;
+456:  const Mn_t = As_tension * fy * (d - a_final / 2); // N·mm
+457:  let Mn_c = 0;
+458:  if (As_compression > 0) {
+459:    const eps_prime = epsilon_cu * (c - d_prime) / c;
+460:    const fs_prime = Math.min(eps_prime * Es, fy);
+461:    Mn_c = As_compression * fs_prime * (d - d_prime);
+463:  phiMn = phi * (Mn_t + Mn_c) / 1e6; // kN·m
+466:  const shearResult = calcRCBeamShear(Vu, b, d, fc, fy);
+469:  const bars_tension = describeBars(As_tension);
+470:  const bars_compression = describeBars(As_compression);
+472:  const rho = As_tension / (b * d);
+475:  const isSafe = phiMn >= Mu && shearResult.phiVn >= Vu;
+479:    As_compression: Math.round(As_compression),
+482:    bars_compression,
+484:    spacing: Math.round(shearResult.s),
+502: * Vc = 0.17·√fc·b·d   (ACI 318-19 Eq. 22.5.5.1)
+503: * Av/s = max((Vu-φVc)/(φ·fy·d), 0.062·√fc·b/fy)
+508: * @param fc - 混凝土抗壓強度 (MPa)
+512:export function calcRCBeamShear(
+516:  fc: number,
+519:  const phi_v = 0.75; // 剪力強度折減係數 (ACI 318-19 §21.2.1)
+521:  // 混凝土貢獻 Vc (ACI 318-19 Eq. 22.5.5.1)
+522:  const Vc = 0.17 * Math.sqrt(fc) * b * d / 1000; // kN
+524:  const Vu_N = Vu * 1000; // kN → N
+526:  // 若 Vu ≤ φVc/2，不需配剪力筋
+527:  if (Vu <= phi_v * Vc / 2) {
+531:      phiVn: Math.round(phi_v * Vc * 100) / 100,
+537:  // Av/s ≥ (Vu - φVc) / (φ·fy·d)
+538:  // Av/s ≥ 0.062·√fc·b/fy (最小值)
+539:  const Vu_Nmm = Vu * 1000; // kN → N
+540:  const Vc_N = Vc * 1000; // kN → N
+542:  const Av_s_required = Math.max(
+543:    (Vu_Nmm - phi_v * Vc_N) / (phi_v * fy * d),
+544:    (0.062 * Math.sqrt(fc) * b) / fy,
+548:  const Av_D10 = 2 * 71.3; // 2支 D10 (mm²)
+549:  const Av_D13 = 2 * 127; // 2支 D13 (mm²)
+550:  const Av = Av_D10 >= Av_s_required * 1 ? Av_D10 : Av_D13;
+556:  const s_max = Math.min(d / 2, 600);
+563:  const Vs = Av * fy * d / s / 1000; // kN (N → kN)
+564:  const phiVn = phi_v * (Vc + Vs);
+567:  const stirrup_type = Av >= 2 * 127 ? `D13@${s}` : `D10@${s}`;
+590:export function calcContinuousBeam(spans: ContinuousSpan[]): ContinuousBeamResult {
+591:  const nSpans = spans.length;
+593:  const nSupports = nSpans + 1;
+596:  const L = spans.map((s) => s.L);
+601:  const thetaL: number[] = new Array(nSpans).fill(0);
+602:  const thetaR: number[] = new Array(nSpans).fill(0);
+605:    const span = spans[i];
+606:    const Li = span.L;
+607:    for (const load of span.loads) {
+608:      const loadSign = load.direction === 'up' ? -1 : 1;
+610:        const a = load.position ?? Li / 2;
+611:        const b = Li - a;
+612:        const P = load.value * loadSign;
+618:        const start = load.start ?? 0;
+619:        const end = load.end ?? Li;
+620:        const w = load.value * loadSign;
+621:        const len = end - start;
+622:        const c = (start + end) / 2; // 載重中心
+632:          const totalLoad = w * len;
+633:          const a = c;
+634:          const b = Li - a;
+639:        const start = load.start ?? 0;
+640:        const end = load.end ?? Li;
+641:        const w = load.value * loadSign;
+642:        const len = end - start;
+643:        const c = (start + end) / 2;
+645:        const totalLoad = 0.5 * w * len; // 三角形面積
+646:        const a = c;
+647:        const b = Li - a;
+659:  const nEq = nSpans - 1; // 方程式數
+666:  const A: number[][] = new Array(nEq).fill(0).map(() => new Array(nEq).fill(0));
+667:  const b: number[] = new Array(nEq).fill(0);
+670:    const supportIdx = eq + 1; // 內支承編號 (1 ~ nSpans-1)
+690:  const M_interior = solveLinearSystem(A, b);
+694:  const M_support: number[] = new Array(nSupports).fill(0);
+700:  const spanResults: ContinuousBeamResult['spans'] = [];
+703:  const nEnvPoints = 100;
+704:  const totalLength = L.reduce((a, b) => a + b, 0);
+705:  const envStep = totalLength / (nEnvPoints - 1);
+708:  const envMoment: { x: number; m: number }[] = [];
+709:  const envShear: { x: number; v: number }[] = [];
+713:    const Li = L[i];
+714:    const loads = spans[i].loads;
+715:    const M_left = M_support[i]; // 左支承彎矩 (kN·m)
+716:    const M_right = M_support[i + 1]; // 右支承彎矩 (kN·m)
+719:    const simpReactions = calcSimpleReactions(Li, loads);
+724:    const deltaR_left = (M_right - M_left) / Li;
+725:    const deltaR_right = (M_left - M_right) / Li;
+727:    const R_left = simpReactions.left + deltaR_left;
+728:    const R_right = simpReactions.right + deltaR_right;
+731:    const nSpanPoints = 30;
+732:    const spanStep = Li / (nSpanPoints - 1);
+733:    const spanMoment: { x: number; m: number }[] = [];
+734:    const spanShear: { x: number; v: number }[] = [];
+740:      const x_local = j * spanStep; // 該跨內位置 (m)
+741:      const x_global = globalX + x_local;
+744:      const V_simple = calcSimpleShearAt(x_local, Li, loads, simpReactions);
+745:      const M_simple = calcSimpleMomentAt(x_local, Li, loads, simpReactions);
+750:      const V = V_simple + deltaR_left; // R_left already includes delta
+751:      const M = M_simple + M_left * (1 - x_local / Li) + M_right * (x_local / Li);
+753:      spanMoment.push({ x: round(x_local, 3), m: round(M, 2) });
+754:      spanShear.push({ x: round(x_local, 3), v: round(V, 2) });
+763:      reactions: {
+779:    const x_env = p * envStep;
+781:    let cumLen = 0;
+783:      const Li = L[i];
+784:      if (x_env >= cumLen && x_env <= cumLen + Li) {
+785:        const x_local = x_env - cumLen;
+786:        const spanData = spanResults[i];
+788:        const mp = spanData.momentPoints;
+789:        const sp = spanData.shearPoints;
+791:        const idx = Math.min(
+792:          Math.floor((x_local / Li) * (mp.length - 1)),
+795:        const t = ((x_local / Li) * (mp.length - 1)) - idx;
+796:        const m_val = mp[idx].m + t * (mp[Math.min(idx + 1, mp.length - 1)].m - mp[idx].m);
+797:        const v_val = sp[idx].v + t * (sp[Math.min(idx + 1, sp.length - 1)].v - sp[idx].v);
+803:      cumLen += Li;
+825:function calcSimpleReactions(L: number, loads: BeamLoad[]): { left: number; right: number } {
+828:  for (const load of loads) {
+829:    const sign = load.direction === 'up' ? -1 : 1;
+831:      const pos = load.position ?? L / 2;
+832:      const P = load.value * sign;
+836:      const start = load.start ?? 0;
+837:      const end = load.end ?? L;
+838:      const w = load.value * sign;
+839:      const len = end - start;
+840:      const centroid = (start + end) / 2;
+842:      momentSum += w * len * (L - centroid);
+844:      const start = load.start ?? 0;
+845:      const end = load.end ?? L;
+846:      const w = load.value * sign;
+847:      const len = end - start;
+848:      const totalW = 0.5 * w * len; // 三角形面積 = 等效集中載重
+849:      const centroid = start + len * (2 / 3); // 三角形重心（從左起）
+852:      momentSum += totalW * (L - centroid);
+855:  const R_left = momentSum / L;
+856:  const R_right = totalLoad - R_left;
+861:function calcSimpleShearAt(
+865:  reactions: { left: number; right: number },
+867:  let V = reactions.left;
+868:  for (const load of loads) {
+869:    const sign = load.direction === 'up' ? -1 : 1;
+871:      const pos = load.position ?? L / 2;
+874:      const start = load.start ?? 0;
+875:      const end = load.end ?? L;
+876:      const w = load.value * sign;
+883:      const start = load.start ?? 0;
+884:      const end = load.end ?? L;
+885:      const w = load.value * sign;
+887:        const len = end - start;
+888:        const ratio = (x - start) / len;
+892:        const len = end - start;
+901:function calcSimpleMomentAt(
+905:  reactions: { left: number; right: number },
+907:  let M = reactions.left * x;
+908:  for (const load of loads) {
+909:    const sign = load.direction === 'up' ? -1 : 1;
+911:      const pos = load.position ?? L / 2;
+914:      const start = load.start ?? 0;
+915:      const end = load.end ?? L;
+916:      const w = load.value * sign;
+918:        const effEnd = Math.min(x, end);
+919:        const len = effEnd - start;
+923:      const start = load.start ?? 0;
+924:      const end = load.end ?? L;
+925:      const w = load.value * sign;
+927:        const effEnd = Math.min(x, end);
+928:        const len = effEnd - start;
+929:        const x_local = x - start;
+932:        const totalW = 0.5 * w * len;
+933:        const centroid = start + len * (2 / 3);
+934:        const arm = x - centroid;
+946:function calcReactions(
+954:  if (support === 'cantilever') {
+956:    for (const load of loads) {
+958:        const pos = load.position ?? 0;
+962:        const start = load.start ?? 0;
+963:        const end = load.end ?? L;
+964:        const w = load.value;
+965:        const len = end - start;
+966:        const centroid = (start + end) / 2;
+968:        R_right += w * len * centroid;
+970:        const start = load.start ?? 0;
+971:        const end = load.end ?? L;
+972:        const w = load.value;
+973:        const sign = load.direction === 'up' ? -1 : 1;
+974:        const len = end - start;
+975:        const totalW = 0.5 * w * len * sign; // 三角形面積
+976:        const centroid = start + len * (2 / 3); // 重心（從左端算起）
+978:        R_right += totalW * centroid;
+988:    for (const load of loads) {
+989:      const sign = load.direction === 'up' ? -1 : 1;
+991:        const pos = load.position ?? L / 2;
+992:        const P = load.value * sign;
+996:        const start = load.start ?? 0;
+997:        const end = load.end ?? L;
+998:        const w = load.value * sign;
+999:        const len = end - start;
+1000:        const centroid = (start + end) / 2;
+1002:        momentSum += w * len * (L - centroid);
+1004:        const start = load.start ?? 0;
+1005:        const end = load.end ?? L;
+1006:        const w = load.value * sign;
+1007:        const len = end - start;
+1008:        const totalW = 0.5 * w * len;
+1009:        const centroid = start + len * (2 / 3);
+1011:        momentSum += totalW * (L - centroid);
+1027:function calcShearAt(
+1032:  reactions: { left: number; right: number },
+1036:  if (support === 'cantilever') {
+1037:    for (const load of loads) {
+1038:      const sign = load.direction === 'up' ? -1 : 1;
+1040:        const pos = load.position ?? 0;
+1043:        const start = load.start ?? 0;
+1044:        const end = load.end ?? L;
+1045:        const w = load.value * sign;
+1052:        const start = load.start ?? 0;
+1053:        const end = load.end ?? L;
+1054:        const w = load.value * sign;
+1056:          const len = end - start;
+1057:          const ratio = (x - start) / len;
+1060:          const len = end - start;
+1069:  V = reactions.left;
+1071:  for (const load of loads) {
+1072:    const sign = load.direction === 'up' ? -1 : 1;
+1074:      const pos = load.position ?? L / 2;
+1079:      const start = load.start ?? 0;
+1080:      const end = load.end ?? L;
+1081:      const w = load.value * sign;
+1088:      const start = load.start ?? 0;
+1089:      const end = load.end ?? L;
+1090:      const w = load.value * sign;
+1092:        const len = end - start;
+1093:        const ratio = (x - start) / len;
+1096:        const len = end - start;
+1109:function calcMomentAt(
+1114:  reactions: { left: number; right: number },
+1118:  if (support === 'cantilever') {
+1119:    for (const load of loads) {
+1120:      const sign = load.direction === 'up' ? -1 : 1;
+1122:        const pos = load.position ?? 0;
+1127:        const start = load.start ?? 0;
+1128:        const end = load.end ?? L;
+1129:        const w = load.value * sign;
+1131:          const effEnd = Math.min(x, end);
+1132:          const len = effEnd - start;
+1136:        const start = load.start ?? 0;
+1137:        const end = load.end ?? L;
+1138:        const w = load.value * sign;
+1140:          const effEnd = Math.min(x, end);
+1141:          const len = effEnd - start;
+1142:          const totalW = 0.5 * w * len;
+1143:          const centroid = start + len * (2 / 3);
+1144:          const arm = x - centroid;
+1153:  M = reactions.left * x;
+1155:  for (const load of loads) {
+1156:    const sign = load.direction === 'up' ? -1 : 1;
+1158:      const pos = load.position ?? L / 2;
+1163:      const start = load.start ?? 0;
+1164:      const end = load.end ?? L;
+1165:      const w = load.value * sign;
+1167:        const effEnd = Math.min(x, end);
+1168:        const len = effEnd - start;
+1172:      const start = load.start ?? 0;
+1173:      const end = load.end ?? L;
+1174:      const w = load.value * sign;
+1176:        const effEnd = Math.min(x, end);
+1177:        const len = effEnd - start;
+1178:        const totalW = 0.5 * w * len;
+1179:        const centroid = start + len * (2 / 3);
+1180:        const arm = x - centroid;
+1193:function calcDeflectionAt(
+1198:  reactions: { left: number; right: number },
+1200:  const sinFactor = Math.sin((Math.PI * x) / L);
+1204:    for (const load of loads) {
+1205:      const sign = load.direction === 'up' ? -1 : 1;
+1207:        const a = load.position ?? L / 2;
+1208:        const b = L - a;
+1209:        const P = load.value * sign;
+1211:          const deltaMax = (P * 1000 * a * a * b * b) / (3 * L);
+1212:          totalDelta += deltaMax * sinFactor;
+1215:        const start = load.start ?? 0;
+1216:        const end = load.end ?? L;
+1217:        const w = load.value * sign;
+1218:        const len = end - start;
+1220:          const deltaMax = (5 * w * 1000 * L * L * L * L) / (384);
+1221:          totalDelta += deltaMax * sinFactor;
+1223:          const deltaMax = (w * 1000 * len * L * L * L) / (24);
+1224:          totalDelta += deltaMax * sinFactor;
+1227:        const start = load.start ?? 0;
+1228:        const end = load.end ?? L;
+1229:        const w = load.value * sign;
+1230:        const len = end - start;
+1231:        const totalW = 0.5 * w * len;
+1232:        const deltaMax = (totalW * 1000 * L * L * L) / (48);
+1233:        totalDelta += deltaMax * sinFactor;
+1236:    const I_assumed = 2.04e8;
+1237:    const EI = E * I_assumed;
+1241:  if (support === 'cantilever') {
+1242:    const cantFactor = (x * x * (3 * L - x)) / (2 * L * L * L);
+1244:    for (const load of loads) {
+1245:      const sign = load.direction === 'up' ? -1 : 1;
+1247:        const a = load.position ?? 0;
+1248:        const P = load.value * sign;
+1250:          const deltaMax = (P * 1000 * L * L * L) / (3);
+1251:          totalDelta += deltaMax * cantFactor;
+1254:        const start = load.start ?? 0;
+1255:        const end = load.end ?? L;
+1256:        const w = load.value * sign;
+1257:        const len = end - start;
+1259:          const deltaMax = (w * 1000 * len * L * L * L) / (8);
+1260:          totalDelta += deltaMax * cantFactor;
+1263:        const start = load.start ?? 0;
+1264:        const end = load.end ?? L;
+1265:        const w = load.value * sign;
+1266:        const len = end - start;
+1268:          const deltaMax = (0.5 * w * 1000 * len * L * L * L) / (8);
+1269:          totalDelta += deltaMax * cantFactor;
+1273:    const I_assumed = 2.04e8;
+1274:    const EI = E * I_assumed;
+1279:    const fixFactor = (x * x * (L - x) * (L - x)) / (L * L * L * L / 16);
+1281:    for (const load of loads) {
+1282:      const sign = load.direction === 'up' ? -1 : 1;
+1284:        const a = load.position ?? L / 2;
+1285:        const P = load.value * sign;
+1286:        const deltaMax = (P * 1000 * L * L * L) / (192);
+1287:        totalDelta += deltaMax * fixFactor;
+1289:        const start = load.start ?? 0;
+1290:        const end = load.end ?? L;
+1291:        const w = load.value * sign;
+1293:          const deltaMax = (w * 1000 * L * L * L * L) / (384);
+1294:          totalDelta += deltaMax * fixFactor;
+1297:        const start = load.start ?? 0;
+1298:        const end = load.end ?? L;
+1299:        const w = load.value * sign;
+1300:        const len = end - start;
+1302:          const deltaMax = (0.5 * w * 1000 * L * L * L * L) / (384);
+1303:          totalDelta += deltaMax * fixFactor;
+1307:    const I_assumed = 2.04e8;
+1308:    const EI = E * I_assumed;
+1320:function describeBars(As: number): string[] {
+1324:  const rebarAreas: { name: string; area: number }[] = [
+1337:  const bars: string[] = [];
+1339:  for (const rb of rebarAreas) {
+1341:    const count = Math.min(Math.floor(remaining / rb.area), 6); // 最多 6 支
+1342:    if (count > 0) {
+1343:      bars.push(`${count}-${rb.name}`);
+1344:      remaining -= count * rb.area;
+1350:    const smallest = rebarAreas[rebarAreas.length - 1];
+1351:    const count = Math.ceil(remaining / smallest.area);
+1352:    bars.push(`${count}-${smallest.name}`);
+1362:function solveLinearSystem(A: number[][], b: number[]): number[] {
+1363:  const n = A.length;
+1366:  const aug: number[][] = A.map((row, i) => [...row, b[i]]);
+1369:  for (let col = 0; col < n; col++) {
+1371:    let maxRow = col;
+1372:    let maxVal = Math.abs(aug[col][col]);
+1373:    for (let row = col + 1; row < n; row++) {
+1374:      if (Math.abs(aug[row][col]) > maxVal) {
+1375:        maxVal = Math.abs(aug[row][col]);
+1380:    if (maxVal < 1e-12) continue; // 奇異矩陣，跳過
+1383:    [aug[col], aug[maxRow]] = [aug[maxRow], aug[col]];
+1386:    for (let row = col + 1; row < n; row++) {
+1387:      const factor = aug[row][col] / aug[col][col];
+1388:      for (let j = col; j <= n; j++) {
+1389:        aug[row][j] -= factor * aug[col][j];
+1395:  const x = new Array(n).fill(0);
+1411:function round(value: number, decimals: number = 2): number {
+1412:  const factor = Math.pow(10, decimals);
+1413:  return Math.round(value * factor) / factor;

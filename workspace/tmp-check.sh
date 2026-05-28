@@ -1,0 +1,1 @@
+cd /workspace && npx tsc --noEmit 2>&1 | tail -100

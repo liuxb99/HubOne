@@ -1,0 +1,88 @@
+scene: fullstack-one-person-company
+description: 一人公司全端專案，六大業務線整合於單一 SPA
+
+roles:
+  - id: planner
+    name: 規劃代理
+    skills: [架構設計, 任務分解, 技術選型]
+  
+  - id: ui-designer
+    name: UI/UX設計師
+    skills: [設計系統, 響應式設計, 深色主題, 交互設計]
+  
+  - id: frontend-logic
+    name: 前端邏輯開發
+    skills: [React/Vanilla JS, SPA架構, 狀態管理, 路由]
+  
+  - id: css-dev
+    name: CSS開發
+    skills: [CSS Grid/Flexbox, 動畫, 主題切換, 響應式]
+  
+  - id: quant-dev
+    name: 量化交易開發
+    skills: [K線圖, 技術指標, Canvas/Chart.js, 回測引擎]
+  
+  - id: civil-dev
+    name: 土木結構開發
+    skills: [結構力學計算, SVG繪圖, 計算書生成]
+  
+  - id: marketplace-dev
+    name: 二手交易開發
+    skills: [CRUD, 搜尋過濾, IndexedDB, 評價系統]
+  
+  - id: ai-tools-dev
+    name: AI工具開發
+    skills: [AI展示, Transformers.js, Prompt工程]
+  
+  - id: ppt-dev
+    name: PPT編輯器開發
+    skills: [拖放編輯, Canvas/SVG, HTML匯出, 模板系統]
+  
+  - id: game-dev
+    name: 經典遊戲開發
+    skills: [Canvas遊戲, 遊戲循環, 鍵盤事件, 計分板]
+  
+  - id: reviewer
+    name: 評分代理
+    skills: [程式碼審查, 測試驗證, 品質把關]
+
+task_breakdown:
+  - phase: 1-專案基礎
+    tasks:
+      - TASK-001: 專案初始化與架構搭建
+      - TASK-002: 設計系統與主題系統
+      - TASK-003: 導航與首頁儀表板
+  
+  - phase: 2-量化交易
+    tasks:
+      - TASK-004: K線圖與行情展示
+      - TASK-005: 技術指標計算
+      - TASK-006: 回測引擎與策略編輯器
+  
+  - phase: 3-土木結構
+    tasks:
+      - TASK-007: 結構計算引擎
+      - TASK-008: 截面資料庫與示意圖
+      - TASK-009: 計算書產生器
+  
+  - phase: 4-二手交易
+    tasks:
+      - TASK-010: 商品刊登與列表
+      - TASK-011: 購物車與訂單管理
+      - TASK-012: 評價與站內訊息
+  
+  - phase: 5-AI工具
+    tasks:
+      - TASK-013: 文字與程式碼工具
+      - TASK-014: AI繪圖與摘要工具
+  
+  - phase: 6-線上PPT
+    tasks:
+      - TASK-015: PPT編輯器核心
+      - TASK-016: 模板系統與匯出
+  
+  - phase: 7-經典遊戲
+    tasks:
+      - TASK-017: 俄羅斯方塊 & 貪食蛇
+      - TASK-018: 踩地雷 & 2048
+      - TASK-019: 打磚塊 & 遊戲大廳
