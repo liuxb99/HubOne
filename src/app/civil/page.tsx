@@ -169,7 +169,6 @@ function CivilContent() {
           <div className="max-h-[600px] overflow-y-auto">
             <CalcReport
               result={result}
-              type={activeTool === 'beam' ? 'beam' : 'column'}
               params={result._params ?? {}}
             />
           </div>
