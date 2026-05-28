@@ -251,6 +251,18 @@ export function pptReducer(state: PPTDocument, action: Action): PPTDocument {
       };
     }
 
+    // ── 更新投影片屬性 ─────────────────────────────────────────────────
+    case "UPDATE_SLIDE": { const now = Date.now();
+      const { slideId, updates } = action.payload;
+      return {
+        ...state,
+        slides: state.slides.map((slide) =>
+          slide.id === slideId ? { ...slide, ...updates } : slide
+        ),
+        updatedAt: now,
+      };
+    }
+
     // ── 設定背景 ───────────────────────────────────────────────────────
     case "SET_BACKGROUND": { const now = Date.now();
       const { slideId, background } = action.payload;

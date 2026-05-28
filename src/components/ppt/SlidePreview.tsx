@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { usePPTStore, CANVAS_WIDTH, CANVAS_HEIGHT } from "@/lib/ppt/store";
-import type { TextElement, ShapeElement, ImageElement } from "@/lib/ppt/types";
+import type { TextElement, ShapeElement, ImageElement, Slide } from "@/lib/ppt/types";
+import { getTransitionStyles, getAllTransitionKeyframes, type SlideTransition, type TransitionDirection } from "@/lib/ppt/animations";
 
 // ── 輔助：Render 單一元件 ─────────────────────────────────────────────────
 
@@ -83,33 +84,129 @@ function renderPreviewElement(el: import("@/lib/ppt/types").SlideElement) {
   return null;
 }
 
+// ── 取得過渡型別與持續時間 ───────────────────────────────────────────────
+
+function getSlideTransition(slide: Slide): SlideTransition {
+  const t = slide.transition;
+  if (t && ["none", "fade", "slide-left", "slide-right", "slide-up", "slide-down", "zoom", "flip"].includes(t)) {
+    return t as SlideTransition;
+  }
+  return "none";
+}
+
+function getSlideDuration(slide: Slide): number {
+  return slide.transitionDuration ?? 600;
+}
+
 // ── 主元件 ────────────────────────────────────────────────────────────────
 
 export default function SlidePreview() {
   const { doc, editor, editorDispatch } = usePPTStore();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // ── 動畫狀態 ──────────────────────────────────────────────────────────
+  const [animating, setAnimating] = useState(false);
+  const [animationStyle, setAnimationStyle] = useState<React.CSSProperties>({});
+  const [animationDirection, setAnimationDirection] = useState<TransitionDirection>("forward");
+  const prevIndexRef = useRef(editor.currentPresentIndex);
+
   const currentSlide = doc.slides[editor.currentPresentIndex] ?? null;
   const total = doc.slides.length;
   const currentIndex = editor.currentPresentIndex;
+
+  // 當前投影片的過渡設定
+  const transitionType = currentSlide ? getSlideTransition(currentSlide) : "none";
+  const transitionDuration = currentSlide ? getSlideDuration(currentSlide) : 600;
+
+  // ── 注入動畫 CSS ──────────────────────────────────────────────────────
+  const keyframeCSS = useMemo(() => getAllTransitionKeyframes(), []);
+
+  // ── 切換投影片（含過渡動畫） ──────────────────────────────────────────
+
+  const goToSlide = useCallback(
+    (targetIndex: number) => {
+      if (animating) return;
+      if (targetIndex < 0 || targetIndex >= total) return;
+      if (targetIndex === currentIndex) return;
+
+      const direction: TransitionDirection = targetIndex > currentIndex ? "forward" : "backward";
+      const targetSlide = doc.slides[targetIndex];
+      const tType = targetSlide ? getSlideTransition(targetSlide) : "none";
+      const tDur = targetSlide ? getSlideDuration(targetSlide) : 600;
+
+      if (tType === "none" || tDur === 0) {
+        // 無過渡，直接切換
+        const diff = Math.abs(targetIndex - currentIndex);
+        for (let i = 0; i < diff; i++) {
+          if (targetIndex > currentIndex) {
+            editorDispatch({ type: "NEXT_SLIDE", payload: { total } });
+          } else {
+            editorDispatch({ type: "PREV_SLIDE" });
+          }
+        }
+        return;
+      }
+
+      // 有過渡：設定動畫樣式
+      const { enterStyle } = getTransitionStyles(tType, tDur, direction);
+      setAnimationDirection(direction);
+      setAnimationStyle(enterStyle);
+      setAnimating(true);
+
+      // 先切換投影片
+      const diff2 = Math.abs(targetIndex - currentIndex);
+      for (let i = 0; i < diff2; i++) {
+        if (targetIndex > currentIndex) {
+          editorDispatch({ type: "NEXT_SLIDE", payload: { total } });
+        } else {
+          editorDispatch({ type: "PREV_SLIDE" });
+        }
+      }
+
+      // 動畫結束後清除樣式
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationStyle({});
+      }, tDur);
+    },
+    [animating, currentIndex, total, doc.slides, editorDispatch]
+  );
+
+  // ── 監聽 currentIndex 變化以觸發動畫 ─────────────────────────────────
+
+  useEffect(() => {
+    const prev = prevIndexRef.current;
+    if (prev !== currentIndex) {
+      // 當 index 因其他方式改變時（如按鈕直接跳頁）
+      prevIndexRef.current = currentIndex;
+    }
+  }, [currentIndex]);
 
   // ── 鍵盤控制 ──────────────────────────────────────────────────────────
 
   const goNext = useCallback(() => {
     if (currentIndex < total - 1) {
-      editorDispatch({ type: "NEXT_SLIDE", payload: { total } });
+      goToSlide(currentIndex + 1);
     }
-  }, [currentIndex, total, editorDispatch]);
+  }, [currentIndex, total, goToSlide]);
 
   const goPrev = useCallback(() => {
     if (currentIndex > 0) {
-      editorDispatch({ type: "PREV_SLIDE" });
+      goToSlide(currentIndex - 1);
     }
-  }, [currentIndex, editorDispatch]);
+  }, [currentIndex, goToSlide]);
+
+  // 優化：直接跳到首/尾頁
+  const goToFirst = useCallback(() => {
+    goToSlide(0);
+  }, [goToSlide]);
+
+  const goToLast = useCallback(() => {
+    goToSlide(total - 1);
+  }, [goToSlide, total]);
 
   const exitFullscreen = useCallback(() => {
     editorDispatch({ type: "END_PRESENT" });
-    // 嘗試退出瀏覽器全螢幕
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
     }
@@ -129,17 +226,16 @@ export default function SlidePreview() {
         exitFullscreen();
       } else if (e.key === "Home") {
         e.preventDefault();
-        editorDispatch({ type: "PREV_SLIDE" });
-        // 跳到第一頁：連續調用 prev 到 index 0
+        goToFirst();
       } else if (e.key === "End") {
         e.preventDefault();
-        // 跳到最後一頁
+        goToLast();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goNext, goPrev, exitFullscreen, editorDispatch]);
+  }, [goNext, goPrev, exitFullscreen, goToFirst, goToLast]);
 
   // ── 點擊左右切換 ──────────────────────────────────────────────────────
 
@@ -178,9 +274,7 @@ export default function SlidePreview() {
 
   useEffect(() => {
     if (editor.isPresenting && containerRef.current) {
-      containerRef.current.requestFullscreen?.().catch(() => {
-        // 某些瀏覽器可能需要使用者互動才能全螢幕
-      });
+      containerRef.current.requestFullscreen?.().catch(() => {});
     }
   }, [editor.isPresenting]);
 
@@ -188,40 +282,11 @@ export default function SlidePreview() {
 
   useEffect(() => {
     const handleFSChange = () => {
-      if (!document.fullscreenElement && editor.isPresenting) {
-        // 使用者按了 F11 或 Escape 退出全螢幕
-        // 但我們還是保留放映模式
-      }
+      // 不做特殊處理
     };
     document.addEventListener("fullscreenchange", handleFSChange);
     return () => document.removeEventListener("fullscreenchange", handleFSChange);
-  }, [editor.isPresenting]);
-
-  // ── 處理 Home/End ─────────────────────────────────────────────────────
-  // 用 useEffect 來處理 Home/End
-  useEffect(() => {
-    const handleKeyDown2 = (e: KeyboardEvent) => {
-      if (e.key === "Home") {
-        e.preventDefault();
-        // 跳到第一頁：設為 0
-        while (editor.currentPresentIndex > 0) {
-          editorDispatch({ type: "PREV_SLIDE" });
-          break;
-        }
-      } else if (e.key === "End") {
-        e.preventDefault();
-        // 跳到最後一頁
-        const target = total - 1;
-        while (editor.currentPresentIndex < target) {
-          editorDispatch({ type: "NEXT_SLIDE", payload: { total } });
-          break;
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown2);
-    return () => window.removeEventListener("keydown", handleKeyDown2);
-  }, [editor.currentPresentIndex, total, editorDispatch]);
+  }, []);
 
   if (!editor.isPresenting) return null;
 
@@ -252,6 +317,11 @@ export default function SlidePreview() {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* 注入動畫 CSS */}
+      {keyframeCSS && (
+        <style>{keyframeCSS}</style>
+      )}
+
       {/* 投影片內容 — 垂直置中 */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div
@@ -261,6 +331,7 @@ export default function SlidePreview() {
             maxWidth: CANVAS_WIDTH,
             aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
             ...bgStyle,
+            ...animationStyle,
           }}
         >
           {/* Render 所有元件 */}
@@ -296,12 +367,7 @@ export default function SlidePreview() {
               key={i}
               onClick={(e) => {
                 e.stopPropagation();
-                // 直接跳到指定頁
-                const diff = i - editor.currentPresentIndex;
-                for (let j = 0; j < Math.abs(diff); j++) {
-                  if (diff > 0) editorDispatch({ type: "NEXT_SLIDE", payload: { total } });
-                  else editorDispatch({ type: "PREV_SLIDE" });
-                }
+                goToSlide(i);
               }}
               className={cn(
                 "w-2.5 h-2.5 rounded-full transition-all",
@@ -339,6 +405,13 @@ export default function SlidePreview() {
         <span className="text-sm text-zinc-400">
           {currentIndex + 1} / {total}
         </span>
+
+        {/* 過渡效果指示 */}
+        {transitionType !== "none" && (
+          <span className="text-xs text-zinc-600 hidden sm:inline">
+            {transitionType}
+          </span>
+        )}
 
         {/* 退出 */}
         <button

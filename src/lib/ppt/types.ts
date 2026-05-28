@@ -76,6 +76,12 @@ export interface Slide {
   id: string;
   elements: SlideElement[];
   background: SlideBackground;
+  /** 投影片過渡效果（階段二） */
+  transition?: string;
+  /** 過渡持續時間（毫秒），預設 600 */
+  transitionDuration?: number;
+  /** 演講者備忘錄（階段三） */
+  notes?: string;
 }
 
 // ── 模板 ─────────────────────────────────────────────────────────────────
@@ -147,4 +153,5 @@ export type Action =
   | { type: "END_PRESENT" }
   | { type: "SELECT_ELEMENT"; payload: { elementId: string; multi?: boolean } }
   | { type: "DESELECT_ALL" }
-  | { type: "LOAD_DOCUMENT"; payload: PPTDocument };
+  | { type: "LOAD_DOCUMENT"; payload: PPTDocument }
+  | { type: "UPDATE_SLIDE"; payload: { slideId: string; updates: Partial<Slide> } };

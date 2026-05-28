@@ -4,6 +4,7 @@
 
 import type { PPTDocument, Slide, SlideElement, TextElement, ImageElement, ShapeElement } from "./types";
 import { getTemplateById } from "./template";
+import { getAllTransitionKeyframes, type SlideTransition } from "./animations";
 
 // ── 輔助：CSS 跳脫 ───────────────────────────────────────────────────────
 
@@ -108,7 +109,10 @@ function renderSlide(slide: Slide, index: number, total: number): string {
 
   const elementsHTML = slide.elements.map(renderElement).join("\n");
 
-  return `<div class="slide" data-index="${index}">
+  const transitionAttr = slide.transition ? ` data-transition="${slide.transition}"` : "";
+  const durationAttr = slide.transitionDuration ? ` data-transition-duration="${slide.transitionDuration}"` : "";
+
+  return `<div class="slide" data-index="${index}"${transitionAttr}${durationAttr}>
   <div class="slide-content" style="${bgStyle} position: relative; width: 100%; height: 100%; overflow: hidden;">
     ${elementsHTML}
   </div>
@@ -196,6 +200,12 @@ export function exportToHTML(doc: PPTDocument): string {
     z-index: 100;
     pointer-events: none;
   }
+
+  /* ── 過渡動畫 ─────────────────────────────────────────────── */
+  ${getAllTransitionKeyframes()}
+
+  .slide-enter { animation-fill-mode: both; animation-timing-function: ease; }
+  .slide-exit  { animation-fill-mode: both; animation-timing-function: ease; }
 </style>
 </head>
 <body>
@@ -218,7 +228,48 @@ export function exportToHTML(doc: PPTDocument): string {
     var nextBtn = document.getElementById('nextBtn');
     var progressBar = document.getElementById('progressBar');
 
+    function getTransitionType(slide) {
+      var t = slide.getAttribute('data-transition');
+      if (t && ['none','fade','slide-left','slide-right','slide-up','slide-down','zoom','flip'].indexOf(t) >= 0) return t;
+      return 'none';
+    }
+
+    function getTransitionDuration(slide) {
+      var d = parseInt(slide.getAttribute('data-transition-duration'), 10);
+      return d > 0 ? d : 600;
+    }
+
+    function applyTransition(fromIndex, toIndex) {
+      var fromSlide = slides[fromIndex];
+      var toSlide = slides[toIndex];
+      if (!fromSlide || !toSlide) return;
+
+      var type = getTransitionType(toSlide);
+      if (type === 'none') return;
+
+      var duration = getTransitionDuration(toSlide);
+      var direction = toIndex > fromIndex ? 'forward' : 'backward';
+
+      // 構造動畫名稱
+      var enterName = '';
+      if (type === 'fade') { enterName = 'fadeIn'; }
+      else if (type === 'slide-left') { enterName = direction === 'forward' ? 'slideInFromRight' : 'slideInFromLeft'; }
+      else if (type === 'slide-right') { enterName = direction === 'forward' ? 'slideInFromLeft' : 'slideInFromRight'; }
+      else if (type === 'slide-up') { enterName = direction === 'forward' ? 'slideInFromBottom' : 'slideInFromTop'; }
+      else if (type === 'slide-down') { enterName = direction === 'forward' ? 'slideInFromTop' : 'slideInFromBottom'; }
+      else if (type === 'zoom') { enterName = 'zoomIn'; }
+      else if (type === 'flip') { enterName = 'flipIn'; }
+
+      if (enterName) {
+        toSlide.style.animation = enterName + ' ' + (duration/1000) + 's ease both';
+        setTimeout(function() {
+          toSlide.style.animation = '';
+        }, duration);
+      }
+    }
+
     function showSlide(index) {
+      var prev = current;
       slides.forEach(function(s, i) {
         s.classList.toggle('active', i === index);
       });
@@ -227,6 +278,10 @@ export function exportToHTML(doc: PPTDocument): string {
       nextBtn.disabled = current >= total - 1;
       if (progressBar) {
         progressBar.style.width = ((current + 1) / total * 100) + '%';
+      }
+      // 過渡動畫
+      if (prev !== index) {
+        applyTransition(prev, index);
       }
     }
 

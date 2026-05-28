@@ -14,6 +14,8 @@ const SlideEditor = dynamic(() => import("@/components/ppt/SlideEditor"), { ssr:
 const PropertyPanel = dynamic(() => import("@/components/ppt/PropertyPanel"), { ssr: false });
 const TemplatePicker = dynamic(() => import("@/components/ppt/TemplatePicker"), { ssr: false });
 const SlidePreview = dynamic(() => import("@/components/ppt/SlidePreview"), { ssr: false });
+const MarkdownImportModal = dynamic(() => import("@/components/ppt/MarkdownImportModal"), { ssr: false });
+const MarkdownExportModal = dynamic(() => import("@/components/ppt/MarkdownExportModal"), { ssr: false });
 
 // ── 次導航標籤 ────────────────────────────────────────────────────────────
 
@@ -31,8 +33,10 @@ function PptEditor() {
   const { doc, editor, editorDispatch } = usePPTStore();
 
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [mdImportOpen, setMdImportOpen] = useState(false);
+  const [mdExportOpen, setMdExportOpen] = useState(false);
 
-  // ── 匯出 ──────────────────────────────────────────────────────────────
+  // ── 匯出 HTML ─────────────────────────────────────────────────────────
   const handleExport = useCallback(() => {
     const html = exportToHTML(doc);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -59,6 +63,8 @@ function PptEditor() {
         onOpenTemplates={() => setTemplatePickerOpen(true)}
         onStartPresent={handleStartPresent}
         onExport={handleExport}
+        onImportMD={() => setMdImportOpen(true)}
+        onExportMD={() => setMdExportOpen(true)}
       />
 
       {/* 次導航 */}
@@ -84,6 +90,18 @@ function PptEditor() {
       <TemplatePicker
         open={templatePickerOpen}
         onClose={() => setTemplatePickerOpen(false)}
+      />
+
+      {/* Markdown 導入 Modal */}
+      <MarkdownImportModal
+        open={mdImportOpen}
+        onClose={() => setMdImportOpen(false)}
+      />
+
+      {/* Markdown 匯出 Modal */}
+      <MarkdownExportModal
+        open={mdExportOpen}
+        onClose={() => setMdExportOpen(false)}
       />
 
       {/* 全螢幕放映 */}

@@ -204,6 +204,69 @@ export default function PropertyPanel() {
                 ))}
               </div>
             </Section>
+
+            {/* ── 投影片過渡效果 ──────────────────────────────────────── */}
+            <Section title="投影片過渡">
+              {/* 過渡類型 */}
+              <div className="mb-2">
+                <label className="text-[10px] text-zinc-600 block mb-1">過渡效果</label>
+                <select
+                  value={currentSlide.transition ?? "none"}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    dispatch({
+                      type: "UPDATE_SLIDE",
+                      payload: {
+                        slideId: currentSlide.id,
+                        updates: { transition: val === "none" ? undefined : val },
+                      },
+                    });
+                  }}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1.5 text-xs text-zinc-300 outline-none focus:border-pink-500"
+                >
+                  <option value="none">無</option>
+                  <option value="fade">淡入淡出</option>
+                  <option value="slide-left">向左滑入</option>
+                  <option value="slide-right">向右滑入</option>
+                  <option value="slide-up">向上滑入</option>
+                  <option value="slide-down">向下滑入</option>
+                  <option value="zoom">縮放</option>
+                  <option value="flip">翻轉</option>
+                </select>
+              </div>
+
+              {/* 過渡持續時間 */}
+              <div>
+                <label className="text-[10px] text-zinc-600 block mb-1">
+                  持續時間: {currentSlide.transitionDuration ?? 600}ms
+                </label>
+                <input
+                  type="range"
+                  min="200"
+                  max="2000"
+                  step="100"
+                  value={currentSlide.transitionDuration ?? 600}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    dispatch({
+                      type: "UPDATE_SLIDE",
+                      payload: {
+                        slideId: currentSlide.id,
+                        updates: { transitionDuration: val },
+                      },
+                    });
+                  }}
+                  className="w-full accent-pink-500"
+                />
+              </div>
+
+              {/* 預覽指示 */}
+              <div className="mt-2 px-2 py-1.5 bg-zinc-800/50 rounded-lg">
+                <p className="text-[10px] text-zinc-500">
+                  💡 放映時套用過渡效果
+                </p>
+              </div>
+            </Section>
           </>
         )}
 

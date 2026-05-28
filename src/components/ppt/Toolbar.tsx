@@ -24,11 +24,13 @@ interface ToolbarProps {
   onOpenTemplates: () => void;
   onStartPresent: () => void;
   onExport: () => void;
+  onImportMD: () => void;
+  onExportMD: () => void;
 }
 
 // ── 元件 ─────────────────────────────────────────────────────────────────
 
-export default function Toolbar({ onOpenTemplates, onStartPresent, onExport }: ToolbarProps) {
+export default function Toolbar({ onOpenTemplates, onStartPresent, onExport, onImportMD, onExportMD }: ToolbarProps) {
   const { doc, editor, dispatch, editorDispatch, currentSlide } = usePPTStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -422,6 +424,16 @@ export default function Toolbar({ onOpenTemplates, onStartPresent, onExport }: T
         <Button variant="ghost" size="sm" onClick={onOpenTemplates} className="text-xs !px-2" title="模板">
           <span>🎨</span>
           <span className="hidden sm:inline ml-1">模板</span>
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={onImportMD} className="text-xs !px-2" title="導入 Markdown">
+          <span>📄</span>
+          <span className="hidden sm:inline ml-1">導入 MD</span>
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={onExportMD} className="text-xs !px-2" title="匯出 Markdown">
+          <span>📝</span>
+          <span className="hidden sm:inline ml-1">匯出 MD</span>
         </Button>
 
         <Button variant="ghost" size="sm" onClick={onStartPresent} className="text-xs !px-2" title="放映">
