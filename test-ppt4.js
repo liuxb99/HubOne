@@ -128,7 +128,18 @@ const { mkdirSync } = require("fs");
   });
 
   await test("11. 匯出 HTML", async () => {
-    await waitAndClick('button:has-text("匯出")');
+    const exportBtn = await page.$('button:has-text("匯出")');
+    if (!exportBtn) throw new Error("找不到匯出按鈕");
+    await exportBtn.click();
+    await waitForRender();
+    // 在 ExportPanel Modal 中點擊 HTML 下載按鈕
+    const downloadBtn = await page.$('text=匯出 HTML');
+    if (downloadBtn) {
+      await downloadBtn.click();
+      await waitForRender();
+    }
+    // 重新載入頁面以清除所有 Modal
+    await page.goto("http://localhost:3000/ppt", { waitUntil: "networkidle" });
     await waitForRender();
   });
 
