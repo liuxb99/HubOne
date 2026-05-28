@@ -108,6 +108,22 @@ export interface Template {
   fonts: TemplateFonts;
 }
 
+// ── 簡報設定 ─────────────────────────────────────────────────────────────
+
+export interface PPTSettings {
+  defaultTransition: "none" | "fade" | "slide-left" | "slide-right" | "slide-up" | "slide-down" | "zoom" | "flip";
+  defaultTransitionDuration: number;
+  defaultFont: string;
+  aspectRatio: "16:9" | "4:3";
+}
+
+export const DEFAULT_SETTINGS: PPTSettings = {
+  defaultTransition: "none",
+  defaultTransitionDuration: 600,
+  defaultFont: "Inter",
+  aspectRatio: "16:9",
+};
+
 // ── 文件 ─────────────────────────────────────────────────────────────────
 
 export interface PPTDocument {
@@ -117,6 +133,7 @@ export interface PPTDocument {
   templateId: string;
   createdAt: number;
   updatedAt: number;
+  settings?: PPTSettings;
 }
 
 // ── 編輯器狀態 ───────────────────────────────────────────────────────────
@@ -154,4 +171,5 @@ export type Action =
   | { type: "SELECT_ELEMENT"; payload: { elementId: string; multi?: boolean } }
   | { type: "DESELECT_ALL" }
   | { type: "LOAD_DOCUMENT"; payload: PPTDocument }
-  | { type: "UPDATE_SLIDE"; payload: { slideId: string; updates: Partial<Slide> } };
+  | { type: "UPDATE_SLIDE"; payload: { slideId: string; updates: Partial<Slide> } }
+  | { type: "UPDATE_SETTINGS"; payload: Partial<PPTSettings> };

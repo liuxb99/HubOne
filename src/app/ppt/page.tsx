@@ -16,27 +16,62 @@ const TemplatePicker = dynamic(() => import("@/components/ppt/TemplatePicker"), 
 const SlidePreview = dynamic(() => import("@/components/ppt/SlidePreview"), { ssr: false });
 const MarkdownImportModal = dynamic(() => import("@/components/ppt/MarkdownImportModal"), { ssr: false });
 const MarkdownExportModal = dynamic(() => import("@/components/ppt/MarkdownExportModal"), { ssr: false });
+const SlideOutlineView = dynamic(() => import("@/components/ppt/SlideOutlineView"), { ssr: false });
+const ExportPanel = dynamic(() => import("@/components/ppt/ExportPanel"), { ssr: false });
+const SettingsPanel = dynamic(() => import("@/components/ppt/SettingsPanel"), { ssr: false });
 
-// ── 次導航標籤 ────────────────────────────────────────────────────────────
+// ── ViewMode 型別 ─────────────────────────────────────────────────────────
 
-const tabs = [
-  { id: "editor", label: "編輯", icon: "✏️", href: "/ppt" },
-  { id: "templates", label: "模板", icon: "🎨", href: "/ppt/templates" },
-  { id: "slides", label: "投影片", icon: "📄", href: "/ppt/slides" },
-  { id: "export", label: "匯出", icon: "📤", href: "/ppt/export" },
-  { id: "settings", label: "設定", icon: "⚙️", href: "/ppt/settings" },
-];
+type ViewMode = "editor" | "slides" | "settings";
 
 // ── 內部內容（消耗 PPTContext） ───────────────────────────────────────────
 
 function PptEditor() {
   const { doc, editor, editorDispatch } = usePPTStore();
 
+  const [viewMode, setViewMode] = useState<ViewMode>("editor");
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [mdImportOpen, setMdImportOpen] = useState(false);
   const [mdExportOpen, setMdExportOpen] = useState(false);
+  const [exportPanelOpen, setExportPanelOpen] = useState(false);
 
-  // ── 匯出 HTML ─────────────────────────────────────────────────────────
+  // ── Tab 點擊處理 ─────────────────────────────────────────────────────
+  const handleTabClick = useCallback((tabId: string) => {
+    switch (tabId) {
+      case "editor":
+        setViewMode("editor");
+        break;
+      case "templates":
+        setTemplatePickerOpen(true);
+        break;
+      case "slides":
+        setViewMode((prev) => (prev === "slides" ? "editor" : "slides"));
+        break;
+      case "export":
+        setExportPanelOpen(true);
+        break;
+      case "settings":
+        setViewMode((prev) => (prev === "settings" ? "editor" : "settings"));
+        break;
+    }
+  }, []);
+
+  // ── SubNav Tabs ─────────────────────────────────────────────────────
+  const tabs = [
+    { id: "editor", label: "編輯", icon: "✏️", onClick: () => handleTabClick("editor") },
+    { id: "templates", label: "模板", icon: "🎨", onClick: () => handleTabClick("templates") },
+    { id: "slides", label: "投影片", icon: "📄", onClick: () => handleTabClick("slides") },
+    { id: "export", label: "匯出", icon: "📤", onClick: () => handleTabClick("export") },
+    { id: "settings", label: "設定", icon: "⚙️", onClick: () => handleTabClick("settings") },
+  ];
+
+  // 計算 activeTabId（用於 SubNav）
+  const activeTabId = viewMode === "editor" ? "editor"
+    : viewMode === "slides" ? "slides"
+    : viewMode === "settings" ? "settings"
+    : undefined;
+
+  // ── 匯出 HTML（Toolbar 快速匯出） ───────────────────────────────────
   const handleExport = useCallback(() => {
     const html = exportToHTML(doc);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -68,28 +103,59 @@ function PptEditor() {
       />
 
       {/* 次導航 */}
-      <SubNav tabs={tabs} />
+      <SubNav tabs={tabs} activeId={activeTabId} />
 
-      {/* 主體：三欄編輯器佈局 */}
+      {/* 主體：根據 viewMode 條件渲染 */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 左側 — 投影片縮圖列表 */}
-        <div className="hidden sm:block">
-          <SlideList />
-        </div>
+        {viewMode === "editor" && (
+          <>
+            {/* 左側 — 投影片縮圖列表 */}
+            <div className="hidden sm:block">
+              <SlideList />
+            </div>
 
-        {/* 中間 — 編輯區 */}
-        <SlideEditor />
+            {/* 中間 — 編輯區 */}
+            <SlideEditor />
 
-        {/* 右側 — 屬性面板（lg 以上顯示） */}
-        <div className="hidden lg:block">
-          <PropertyPanel />
-        </div>
+            {/* 右側 — 屬性面板（lg 以上顯示） */}
+            <div className="hidden lg:block">
+              <PropertyPanel />
+            </div>
+          </>
+        )}
+
+        {viewMode === "slides" && (
+          <SlideOutlineView onClose={() => setViewMode("editor")} />
+        )}
+
+        {viewMode === "settings" && (
+          <>
+            {/* 左側 — 投影片縮圖列表 */}
+            <div className="hidden sm:block">
+              <SlideList />
+            </div>
+
+            {/* 中間 — 編輯區 */}
+            <SlideEditor />
+
+            {/* 右側 — 設定面板（lg 以上顯示） */}
+            <div className="hidden lg:block">
+              <SettingsPanel onClose={() => setViewMode("editor")} />
+            </div>
+          </>
+        )}
       </div>
 
       {/* 模板選擇 Modal */}
       <TemplatePicker
         open={templatePickerOpen}
         onClose={() => setTemplatePickerOpen(false)}
+      />
+
+      {/* 匯出面板 Modal */}
+      <ExportPanel
+        open={exportPanelOpen}
+        onClose={() => setExportPanelOpen(false)}
       />
 
       {/* Markdown 導入 Modal */}

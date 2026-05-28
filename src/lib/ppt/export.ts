@@ -6,6 +6,22 @@ import type { PPTDocument, Slide, SlideElement, TextElement, ImageElement, Shape
 import { getTemplateById } from "./template";
 import { getAllTransitionKeyframes, type SlideTransition } from "./animations";
 
+// ── 輔助：純文字匯出 ─────────────────────────────────────────────────────
+
+/**
+ * 從 PPTDocument 提取所有投影片的文字內容，以 `--- 第 N 頁 ---` 分隔。
+ */
+export function slidesToText(doc: PPTDocument): string {
+  return doc.slides
+    .map((slide, i) => {
+      const textParts = slide.elements
+        .filter((el): el is TextElement => el.type === "text")
+        .map((el) => el.content);
+      return `--- 第 ${i + 1} 頁 ---\n${textParts.join("\n\n")}`;
+    })
+    .join("\n\n");
+}
+
 // ── 輔助：CSS 跳脫 ───────────────────────────────────────────────────────
 
 function esc(str: string): string {

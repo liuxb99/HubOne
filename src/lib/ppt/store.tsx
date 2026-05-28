@@ -21,7 +21,9 @@ import type {
   EditorState,
   Action,
   Template,
+  PPTSettings,
 } from "./types";
+import { DEFAULT_SETTINGS } from "./types";
 import { getDefaultTemplate } from "./template";
 
 // ── 常數 ─────────────────────────────────────────────────────────────────
@@ -259,6 +261,15 @@ export function pptReducer(state: PPTDocument, action: Action): PPTDocument {
         slides: state.slides.map((slide) =>
           slide.id === slideId ? { ...slide, ...updates } : slide
         ),
+        updatedAt: now,
+      };
+    }
+
+    // ── 更新簡報設定 ───────────────────────────────────────────────────
+    case "UPDATE_SETTINGS": { const now = Date.now();
+      return {
+        ...state,
+        settings: { ...(state.settings ?? DEFAULT_SETTINGS), ...action.payload },
         updatedAt: now,
       };
     }
