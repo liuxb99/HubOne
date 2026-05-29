@@ -18,14 +18,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build project
+      - name: Build
         run: npm run build
 
       - name: Deploy to Vercel
-        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        uses: andymckay/vercel-action@v1.4.17
+        with:
+          token: ${{ secrets.VERCEL_TOKEN }}
+          vercel_project_id: ${{ secrets.VERCEL_PROJECT_ID }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          working_directory: .
