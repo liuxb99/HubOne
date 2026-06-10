@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OPC — One Person Company</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+:root{--bg-primary:#0a0e1a;--bg-secondary:#111827;--bg-tertiary:#1a2332;--bg-surface:#1e293b;--border:#2d3a50;--accent-indigo:#6366f1;--accent-purple:#8b5cf6;--accent-pink:#ec4899;--gradient-primary:linear-gradient(135deg,#6366f1,#8b5cf6);--gradient-accent:linear-gradient(135deg,#6366f1,#ec4899);--text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-tertiary:#64748b;--text-link:#818cf8;--success:#22c55e;--warning:#f59e0b;--error:#ef4444;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;--space-20:80px;--space-24:96px;--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--radius-xl:24px;--shadow-sm:0 1px 3px rgba(0,0,0,0.3);--shadow-md:0 4px 12px rgba(0,0,0,0.4);--shadow-lg:0 8px 30px rgba(0,0,0,0.5);--shadow-glow:0 0 20px rgba(99,102,241,0.3);--font-sans:'Inter','Segoe UI',system-ui,-apple-system,sans-serif}
+body{font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--text-link);text-decoration:none;transition:color .15s}
+a:hover{color:var(--accent-indigo)}
+.navbar{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:var(--space-4)var(--space-8);background:rgba(10,14,26,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.navbar-brand{display:flex;align-items:center;gap:var(--space-3);font-size:18px;font-weight:700;color:var(--text-primary)}
+.navbar-links{display:flex;align-items:center;gap:var(--space-6);font-size:14px;font-weight:500}
+.navbar-links a{color:var(--text-secondary)}
+.navbar-links a:hover{color:var(--text-primary)}
+.btn-ghost{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2)var(--space-4);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--text-secondary);background:transparent;cursor:pointer;transition:all .15s}
+.btn-ghost:hover{border-color:var(--accent-indigo);color:var(--text-primary);background:rgba(99,102,241,0.08)}
+.hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:var(--space-24)var(--space-8)var(--space-16);overflow:hidden}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(99,102,241,0.04)1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.04)1px,transparent 1px);background-size:55px 55px;mask-image:radial-gradient(ellipse 60% 50% at center,black 30%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse 60% 50% at center,black 30%,transparent 70%)}
+.hero-glow1{position:absolute;width:650px;height:650px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,0.06),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.hero-glow2{position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(236,72,153,0.05),transparent 70%);top:20%;right:15%;pointer-events:none}
+.hero-content{position:relative;z-index:1;max-width:800px}
+.hero-badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-1)var(--space-4);background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-full);font-size:12px;font-weight:500;color:var(--accent-indigo);margin-bottom:var(--space-6);letter-spacing:.3px}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse-dot 2s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.4}}
+.hero-title{font-size:52px;font-weight:800;line-height:1.15;margin-bottom:var(--space-6);letter-spacing:-1.5px}
+.hero-title .gradient-main{background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-title .gradient-accent{background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:18px;color:var(--text-secondary);max-width:620px;margin:0 auto var(--space-10);line-height:1.7}
+.hero-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-4);flex-wrap:wrap}
+.btn-primary{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-3)var(--space-8);background:var(--gradient-primary);border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:600;color:#fff;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-glow)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(99,102,241,0.4)}
+.btn-secondary{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-3)var(--space-6);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:500;color:var(--text-secondary);background:transparent;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{border-color:var(--accent-indigo);color:var(--text-primary);background:rgba(99,102,241,0.06)}
+.hero-stats{position:relative;z-index:1;display:flex;gap:var(--space-12);margin-top:var(--space-16);padding-top:var(--space-10);border-top:1px solid var(--border);flex-wrap:wrap;justify-content:center}
+.hero-stat{text-align:center}
+.hero-stat-value{font-size:28px;font-weight:700;color:var(--text-primary)}
+.hero-stat-label{font-size:13px;color:var(--text-tertiary);margin-top:var(--space-1)}
+section{padding:var(--space-24)var(--space-8)}
+.section-inner{max-width:1100px;margin:0 auto}
+.section-label{display:inline-block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:var(--space-3)}
+.section-title{font-size:32px;font-weight:700;margin-bottom:var(--space-4);letter-spacing:-.5px}
+.section-desc{font-size:16px;color:var(--text-secondary);max-width:600px;line-height:1.7;margin-bottom:var(--space-12)}
+.biz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-5)}
+.biz-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-6);transition:all .15s;cursor:default;position:relative;overflow:hidden}
+.biz-card:hover{transform:translateY(-4px);border-color:rgba(99,102,241,0.3);box-shadow:var(--shadow-md)}
+.biz-bar{position:absolute;top:0;left:0;right:0;height:3px}
+.biz-bar.green{background:linear-gradient(90deg,#22c55e,#10b981)}
+.biz-bar.orange{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.biz-bar.pink{background:linear-gradient(90deg,#ec4899,#db2777)}
+.biz-bar.purple{background:linear-gradient(90deg,#8b5cf6,#7c3aed)}
+.biz-bar.fuchsia{background:linear-gradient(90deg,#d946ef,#c026d3)}
+.biz-bar.red{background:linear-gradient(90deg,#ef4444,#dc2626)}
+.biz-icon{font-size:28px;margin-bottom:var(--space-3);margin-top:var(--space-1)}
+.biz-title{font-size:17px;font-weight:600;margin-bottom:var(--space-2)}
+.biz-desc{font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:var(--space-3)}
+.biz-tags{display:flex;flex-wrap:wrap;gap:var(--space-1)}
+.biz-tag{font-size:11px;padding:2px 8px;border-radius:var(--radius-full);background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-tertiary)}
+.tech-grid{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.tech-tag{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2)var(--space-4);background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-full);font-size:13px;font-weight:500;color:var(--text-secondary);transition:all .15s}
+.tech-tag:hover{border-color:var(--accent-indigo);color:var(--text-primary)}
+.tech-tag-dot{width:8px;height:8px;border-radius:50%}
+.cta-section{text-align:center;background:var(--bg-secondary);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+footer{padding:var(--space-10)var(--space-8);text-align:center;font-size:13px;color:var(--text-tertiary);border-top:1px solid var(--border)}
+footer a{color:var(--text-tertiary)}
+footer a:hover{color:var(--text-primary)}
+.footer-links{display:flex;justify-content:center;gap:var(--space-6);margin-bottom:var(--space-4)}
+.footer-links a{font-size:13px;display:inline-flex;align-items:center;gap:var(--space-1)}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg-primary)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:768px){
+.hero-title{font-size:32px}.hero-sub{font-size:16px}.hero-stats{gap:var(--space-6)}
+.navbar-links a:not(.btn-ghost){display:none}
+section{padding:var(--space-16)var(--space-5)}.section-title{font-size:26px}
+.biz-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<nav class="navbar">
+<a href="#" class="navbar-brand">
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="2" y="2" width="24" height="24" rx="6" stroke="url(#ng)" stroke-width="2"/><text x="14" y="19" text-anchor="middle" fill="url(#ng)" font-size="16" font-weight="bold" font-family="Inter,sans-serif">O</text><defs><linearGradient id="ng" x1="2" y1="2" x2="26" y2="26"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs></svg>
+OPC
+</a>
+<div class="navbar-links">
+<a href="#services">業務</a><a href="#tech">技術</a>
+<a href="https://github.com/liuxb99/HubOne" target="_blank" rel="noopener" class="btn-ghost"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+</div></nav>
+
+<section class="hero">
+<div class="hero-grid"></div><div class="hero-glow1"></div><div class="hero-glow2"></div>
+<div class="hero-content">
+<div class="hero-badge"><span class="hero-badge-dot"></span>一人公司 · 無限可能</div>
+<h1 class="hero-title"><span class="gradient-main">One Person</span><br/><span class="gradient-accent">Company</span></h1>
+<p class="hero-sub">六大業務線整合於同一平台 — 量化交易、土木結構、二手交易、AI 工具、線上簡報、經典遊戲，全部由一人運營。</p>
+<div class="hero-actions">
+<a href="https://hub-one-sooty.vercel.app" target="_blank" rel="noopener" class="btn-primary">立即探索 →</a>
+<a href="https://github.com/liuxb99/HubOne" target="_blank" rel="noopener" class="btn-secondary"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>檢視原始碼</a>
+</div></div>
+<div class="hero-stats">
+<div class="hero-stat"><div class="hero-stat-value">6</div><div class="hero-stat-label">業務線</div></div>
+<div class="hero-stat"><div class="hero-stat-value">48+</div><div class="hero-stat-label">功能模組</div></div>
+<div class="hero-stat"><div class="hero-stat-value">10</div><div class="hero-stat-label">經典遊戲</div></div>
+<div class="hero-stat"><div class="hero-stat-value">1</div><div class="hero-stat-label">人運營</div></div>
+</div></section>
+
+<section id="services"><div class="section-inner">
+<span class="section-label" style="color:var(--accent-indigo)">事業線</span>
+<h2 class="section-title">六大業務・全面覆蓋</h2>
+<p class="section-desc">每個領域都是一個獨立產品，整合在同一個平台，由 AI 輔助一人開發與運營。</p>
+<div class="biz-grid">
+<div class="biz-card"><div class="biz-bar green"></div><div class="biz-icon">📊</div><h3 class="biz-title">量化交易</h3><p class="biz-desc">K線圖表、技術指標、回測引擎、策略編輯器、模擬交易，即時行情一手掌握。</p><div class="biz-tags"><span class="biz-tag">即時行情</span><span class="biz-tag">技術分析</span><span class="biz-tag">回測引擎</span><span class="biz-tag">虛擬交易</span></div></div>
+<div class="biz-card"><div class="biz-bar orange"></div><div class="biz-icon">🏗️</div><h3 class="biz-title">土木結構</h3><p class="biz-desc">梁柱板內力計算、截面資料庫、荷載組合、計算書匯出，工程計算一秒完成。</p><div class="biz-tags"><span class="biz-tag">結構計算</span><span class="biz-tag">截面庫</span><span class="biz-tag">荷載組合</span><span class="biz-tag">SVG 繪圖</span></div></div>
+<div class="biz-card"><div class="biz-bar pink"></div><div class="biz-icon">🛒</div><h3 class="biz-title">二手交易</h3><p class="biz-desc">商品刊登搜尋、購物車訂單管理、評價系統、站內即時訊息，完整交易流程。</p><div class="biz-tags"><span class="biz-tag">商品管理</span><span class="biz-tag">購物車</span><span class="biz-tag">評價系統</span><span class="biz-tag">即時訊息</span></div></div>
+<div class="biz-card"><div class="biz-bar purple"></div><div class="biz-icon">🤖</div><h3 class="biz-title">AI 工具</h3><p class="biz-desc">文字生成、程式碼助手、圖片展示、文件摘要、提示詞管理，AI 輔助工作流程。</p><div class="biz-tags"><span class="biz-tag">文字生成</span><span class="biz-tag">程式碼助手</span><span class="biz-tag">文件摘要</span><span class="biz-tag">提示詞庫</span></div></div>
+<div class="biz-card"><div class="biz-bar fuchsia"></div><div class="biz-icon">📽️</div><h3 class="biz-title">線上 PPT</h3><p class="biz-desc">拖放編輯器、多種模板、圖表表格、Markdown 導入、HTML 匯出，簡報製作利器。</p><div class="biz-tags"><span class="biz-tag">編輯器</span><span class="biz-tag">多種模板</span><span class="biz-tag">圖表支援</span><span class="biz-tag">匯出</span></div></div>
+<div class="biz-card"><div class="biz-bar red"></div><div class="biz-icon">🎮</div><h3 class="biz-title">經典遊戲</h3><p class="biz-desc">10 款熱門經典遊戲，Canvas 實作，全域排行榜，Tab 切換暢玩無阻。</p><div class="biz-tags"><span class="biz-tag">10 款遊戲</span><span class="biz-tag">Canvas 引擎</span><span class="biz-tag">排行榜</span><span class="biz-tag">Tab 切換</span></div></div>
+</div></div></section>
+
+<section id="tech" style="background:var(--bg-secondary);border-top:1px solid var(--border);border-bottom:1px solid var(--border)"><div class="section-inner">
+<span class="section-label" style="color:var(--accent-indigo)">技術棧</span>
+<h2 class="section-title">現代化全端技術</h2>
+<p class="section-desc">Next.js + Prisma + PostgreSQL 驅動，部署於 Vercel，一人公司也能擁有完整產品線。</p>
+<div class="tech-grid">
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#000"></span>Next.js 16</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#3178c6"></span>TypeScript</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#61dafb"></span>React 19</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#2d3748"></span>Prisma</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#336791"></span>PostgreSQL</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#38bdf8"></span>Tailwind CSS</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#000"></span>NextAuth.js</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#22c55e"></span>Vitest</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#e11d48"></span>Playwright</span>
+<span class="tech-tag"><span class="tech-tag-dot" style="background:#8b5cf6"></span>Docker</span>
+</div></div></section>
+
+<section class="cta-section"><div class="section-inner" style="text-align:center">
+<h2 class="section-title" style="margin-bottom:var(--space-4);background:var(--gradient-accent);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">一人公司・無限可能</h2>
+<p style="font-size:16px;color:var(--text-secondary);max-width:480px;margin:0 auto var(--space-8)">六大業務線整合於同一平台，全由 Next.js + PostgreSQL 驅動。</p>
+<a href="https://hub-one-sooty.vercel.app" target="_blank" rel="noopener" class="btn-primary" style="font-size:17px;padding:var(--space-3)var(--space-10)">探索 OPC →</a>
+</div></section>
+
+<footer>
+<div class="footer-links">
+<a href="https://github.com/liuxb99/HubOne" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+<a href="https://hub-one-sooty.vercel.app" target="_blank" rel="noopener"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>線上應用</a>
+</div>
+<p>OPC &copy; 2026 &middot; One Person Company &middot; Built with hua su-design</p>
+</footer>
+</body>
+</html>
