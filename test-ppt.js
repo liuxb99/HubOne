@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { chromium } = require("playwright");
-const { mkdirSync } = require("fs");
-
 (async () => {
+  const { mkdirSync } = await import("fs");
+  const { chromium } = await import("playwright");
+
   mkdirSync("screenshots", { recursive: true });
 
   const browser = await chromium.launch({ headless: true });

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -41,8 +40,8 @@ const electrodeOptions = ELECTRODE_OPTIONS.map((e) => ({
 }));
 
 interface SteelFormProps {
-  onResult?: (result: any) => void;
-  onParamsChange?: (params: Record<string, any>) => void;
+  onResult?: (result: Record<string, unknown> | null) => void;
+  onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
 /**
@@ -99,11 +98,11 @@ export default function SteelForm({ onResult, onParamsChange }: SteelFormProps) 
   useEffect(() => {
     // 傳遞增強結果（含輸入參數供圖表使用）
     if (activeTab === 'bolt' && boltResult) {
-      onResult?.({ ...boltResult, diameter: Number(diameter) } as any);
+      onResult?.({ ...boltResult, diameter: Number(diameter) } as unknown as Record<string, unknown>);
     } else if (activeTab === 'weld' && weldResult) {
-      onResult?.({ ...weldResult, weldSize, weldLength, electrode } as any);
+      onResult?.({ ...weldResult, weldSize, weldLength, electrode } as unknown as Record<string, unknown>);
     } else {
-      onResult?.(result);
+      onResult?.(result as unknown as Record<string, unknown> | null);
     }
   }, [result, activeTab, boltResult, weldResult, diameter, weldSize, weldLength, electrode, onResult]);
 

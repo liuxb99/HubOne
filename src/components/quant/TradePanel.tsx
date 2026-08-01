@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import {
   getPositions,
   addPosition,
@@ -25,26 +25,19 @@ interface TradePanelProps {
  */
 export default function TradePanel({ symbol, currentPrice }: TradePanelProps) {
   const [quantity, setQuantity] = useState(1);
-  const [positions, setPositions] = useState<Position[]>([]);
+  const [positions, setPositions] = useState<Position[]>(() => getPositions());
   const [balance, setBalanceState] = useState(getBalance);
   const [orderType, setOrderType] = useState<"buy" | "sell">("buy");
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const initializedRef = useRef(false);
 
   // 重新整理持倉與餘額
   const refresh = useCallback(() => {
     setPositions(getPositions());
     setBalanceState(getBalance());
   }, []);
-
-  useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-    refresh();
-  }, [refresh]);
 
   // 當前交易對的持倉
   const currentPosition = positions.find((p) => p.symbol === symbol);

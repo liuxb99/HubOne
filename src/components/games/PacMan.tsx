@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -56,9 +55,9 @@ export default function PacMan({ onGameOver }: { onGameOver?: (score: number) =>
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
 
-  const gridRef = useRef(getGrid(MAP));
-  // eslint-disable-next-line react-hooks/refs
-  const totalDots = useRef(countDots(gridRef.current));
+  const initialGrid = getGrid(MAP);
+  const gridRef = useRef(initialGrid);
+  const totalDots = useRef(countDots(initialGrid));
   const eaten = useRef(0);
 
   const pacRef = useRef({ x: 10 * CELL, y: 15 * CELL, dir: "LEFT" as string, nextDir: "LEFT" as string });
@@ -73,9 +72,11 @@ export default function PacMan({ onGameOver }: { onGameOver?: (score: number) =>
   const livesRef = useRef(3);
   const gameOverRef = useRef(false);
   const powerTimer = useRef(0);
+  const onGameOverRef = useRef(onGameOver);
 
   const reset = useCallback(() => {
     gridRef.current = getGrid(MAP);
+    totalDots.current = countDots(gridRef.current);
     eaten.current = 0;
     pacRef.current = { x: 10 * CELL, y: 15 * CELL, dir: "LEFT", nextDir: "LEFT" };
     ghostsRef.current = [
@@ -93,6 +94,10 @@ export default function PacMan({ onGameOver }: { onGameOver?: (score: number) =>
     setGameOver(false);
     setWon(false);
   }, []);
+
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -163,7 +168,7 @@ export default function PacMan({ onGameOver }: { onGameOver?: (score: number) =>
       }
 
       // Check win
-      if (eaten.current >= totalDots.current) { setWon(true); gameOverRef.current = true; onGameOver?.(scoreRef.current); cancelAnimationFrame(animId); return; }
+      if (eaten.current >= totalDots.current) { setWon(true); gameOverRef.current = true; onGameOverRef.current?.(scoreRef.current); cancelAnimationFrame(animId); return; }
 
       // Power timer
       if (powerTimer.current > 0) {
@@ -230,7 +235,7 @@ export default function PacMan({ onGameOver }: { onGameOver?: (score: number) =>
           } else {
             livesRef.current--;
             setLives(livesRef.current);
-            if (livesRef.current <= 0) { setGameOver(true); gameOverRef.current = true; onGameOver?.(scoreRef.current); cancelAnimationFrame(animId); return; }
+            if (livesRef.current <= 0) { setGameOver(true); gameOverRef.current = true; onGameOverRef.current?.(scoreRef.current); cancelAnimationFrame(animId); return; }
             pac.x = 10 * CELL; pac.y = 15 * CELL;
             pac.dir = "LEFT"; pac.nextDir = "LEFT";
           }

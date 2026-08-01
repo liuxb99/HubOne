@@ -1,8 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 const ROWS = 9, COLS = 9, MINES = 10;
 
@@ -68,6 +66,11 @@ export default function Minesweeper({ onGameOver }: { onGameOver?: (score: numbe
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [minesLeft, setMinesLeft] = useState(MINES);
+  const onGameOverRef = useRef(onGameOver);
+
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
 
   const reset = () => {
     setBoard(createBoard());
@@ -84,12 +87,12 @@ export default function Minesweeper({ onGameOver }: { onGameOver?: (score: numbe
       const b = board.map(row => row.map(cell => cell.mine ? { ...cell, revealed: true } : { ...cell }));
       setBoard(b);
       setGameOver(true);
-      onGameOver?.(0);
+      onGameOverRef.current?.(0);
       return;
     }
     const newBoard = reveal(board, r, c);
     setBoard(newBoard);
-    if (checkWin(newBoard)) { setWon(true); setGameOver(true); onGameOver?.(MINES * 10); }
+    if (checkWin(newBoard)) { setWon(true); setGameOver(true); onGameOverRef.current?.(MINES * 10); }
   }, [board, gameOver, won]);
 
   const handleFlag = useCallback((e: React.MouseEvent, r: number, c: number) => {

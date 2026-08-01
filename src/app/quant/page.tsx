@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -46,10 +44,33 @@ type ViewTab = "chart" | "trade";
 export default function QuantDashboard() {
   const [activeSymbol, setActiveSymbol] = useState("2330.TW");
   const [activeCategory, setActiveCategory] = useState<CategoryKey>("tw-stock");
-  const [klineData, setKlineData] = useState<KLine[]>([]);
   const [isConnected, setIsConnected] = useState(true);
   const [mobileView, setMobileView] = useState<ViewTab>("chart");
   const [wsError, setWsError] = useState(false);
+
+  // Per-symbol live-tick counters — avoids setState-in-effect
+  const [tickCounts, setTickCounts] = useState<Record<string, number>>({});
+
+  // Base data re-derived when symbol changes (no state)
+  const baseData = useMemo(
+    () => generateHistory(activeSymbol, 300),
+    [activeSymbol]
+  );
+
+  // Current symbol's live-tick count (defaults to 0 on symbol change)
+  const tickCount = tickCounts[activeSymbol] || 0;
+
+  // Full K-line data = baseData + live ticks applied sequentially
+  const klineData = useMemo(() => {
+    if (tickCount === 0) return baseData;
+    let result = [...baseData];
+    for (let i = 0; i < tickCount && result.length > 0; i++) {
+      const nextK = generateNextKLine(result[result.length - 1]);
+      result = [...result, nextK];
+      if (result.length > 300) result = result.slice(-300);
+    }
+    return result;
+  }, [baseData, tickCount]);
 
   // 根據 activeCategory 過濾交易對
   const filteredPairs = useMemo(
@@ -57,26 +78,18 @@ export default function QuantDashboard() {
     [activeCategory]
   );
 
-  // 初始化 K 線數據 — 傳入 activeSymbol 確保不同股票產生不同數據
-  useEffect(() => {
-    setKlineData(generateHistory(activeSymbol, 300));
-  }, [activeSymbol]);
-
-  // 模擬即時更新（每 3 秒新增一根 K 線）
+  // ── 模擬即時更新（每 3 秒一次 tick） ──────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
-      setKlineData((prev) => {
-        if (prev.length === 0) return prev;
-        const nextK = generateNextKLine(prev[prev.length - 1]);
-        // 保持最多 300 根
-        const updated = [...prev, nextK];
-        return updated.length > 300 ? updated.slice(-300) : updated;
-      });
+      setTickCounts((prev) => ({
+        ...prev,
+        [activeSymbol]: (prev[activeSymbol] || 0) + 1,
+      }));
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeSymbol]);
 
-  // 模擬 WebSocket 連線狀態（每 10 秒隨機斷線/重連）
+  // ── 模擬 WebSocket 連線狀態（每 10 秒隨機斷線/重連） ────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setWsError((prev) => {

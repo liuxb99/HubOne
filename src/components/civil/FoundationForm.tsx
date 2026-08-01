@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -9,8 +8,8 @@ import Badge from "@/components/ui/Badge";
 import { calcSpreadFooting, type FootingResult } from "@/lib/civil/foundation";
 
 interface FoundationFormProps {
-  onResult?: (result: FootingResult | null) => void;
-  onParamsChange?: (params: Record<string, any>) => void;
+  onResult?: (result: Record<string, unknown> | null) => void;
+  onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
 /**
@@ -43,7 +42,7 @@ export default function FoundationForm({ onResult, onParamsChange }: FoundationF
   useEffect(() => {
     // 傳遞增強結果（含輸入參數供圖表使用）
     if (result) {
-      onResult?.(({ ...result, axialLoad }) as any);
+      onResult?.({ ...result, axialLoad });
     } else {
       onResult?.(result);
     }

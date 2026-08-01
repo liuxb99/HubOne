@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -55,13 +53,6 @@ export default function TextView({
   const editorRef = useRef<HTMLDivElement>(null);
   const [showToolbar, setShowToolbar] = useState(false);
   const toolbarTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // 同步外部 content 變化
-  useEffect(() => {
-    if (!isEditing) {
-      setContent(element.content);
-    }
-  }, [element.content, isEditing]);
 
   // ── 進入編輯模式 ──────────────────────────────────────────────────────
 

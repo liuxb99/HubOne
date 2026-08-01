@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * 鋼結構設計計算引擎（AISC 360-16 / AISC ASD）
  *

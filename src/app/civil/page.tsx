@@ -1,8 +1,6 @@
 "use client";
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Suspense, useState, useCallback, useEffect, useRef } from "react";
+import { Suspense, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import SubNav from "@/components/layout/SubNav";
@@ -16,6 +14,23 @@ import BeamDiagram from "@/components/civil/BeamDiagram";
 import PnCurve from "@/components/civil/PnCurve";
 import CalcReport from "@/components/civil/CalcReport";
 import Button from "@/components/ui/Button";
+
+// ── 通用類型 ──
+type CalculationResult = Record<string, unknown>;
+
+interface KeyValueItem {
+  label: string;
+  value: string;
+  unit?: string;
+  highlight?: boolean;
+  safe?: boolean;
+  danger?: boolean;
+}
+
+interface ComboResult {
+  name: string;
+  value: number;
+}
 
 // ── 工具樹狀結構 ──
 interface TreeItem {
@@ -99,22 +114,14 @@ const TOOL_META: Record<ToolCategory, { title: string; desc: string }> = {
 
 function CivilContent() {
   const searchParams = useSearchParams();
-  const [activeTool, setActiveTool] = useState<ToolCategory>('beam');
-  const [expandedGroup, setExpandedGroup] = useState<string>('梁計算');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [result, setResult] = useState<any>(null);
-  const [showReport, setShowReport] = useState(false);
-
-  const urlInitialized = useRef(false);
-  // 從 URL 同步（僅初始化時）
-  useEffect(() => {
-    if (urlInitialized.current) return;
+  const [activeTool, setActiveTool] = useState<ToolCategory>(() => {
     const tool = searchParams.get('tool') as ToolCategory | null;
-    if (tool && Object.keys(TOOL_META).includes(tool)) {
-      urlInitialized.current = true;
-      setActiveTool(tool);
-    }
-  }, [searchParams]);
+    if (tool && Object.keys(TOOL_META).includes(tool)) return tool;
+    return 'beam';
+  });
+  const [expandedGroup, setExpandedGroup] = useState<string>('梁計算');
+  const [result, setResult] = useState<CalculationResult | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   const handleToolChange = useCallback((tool: ToolCategory) => {
     setActiveTool(tool);
@@ -129,9 +136,8 @@ function CivilContent() {
     }
   }, []);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleResult = useCallback((newResult: any) => {
-    setResult(newResult);
+  const handleResult = useCallback((newResult: unknown) => {
+    setResult((newResult as CalculationResult) ?? null);
     setShowReport(false);
   }, []);
 
@@ -149,6 +155,7 @@ function CivilContent() {
 
   const renderDiagram = () => {
     if (showReport && result) {
+      const r = result as Record<string, unknown>;
       return (
         <div className="space-y-3">
           <button
@@ -160,7 +167,7 @@ function CivilContent() {
           <div className="max-h-[600px] overflow-y-auto">
             <CalcReport
               result={result}
-              params={result._params ?? {}}
+              params={(r['_params'] as Record<string, unknown>) ?? {}}
             />
           </div>
         </div>
@@ -171,13 +178,14 @@ function CivilContent() {
       case 'beam':
         return <BeamDiagram result={result} width={420} height={360} />;
       case 'column':
-        if (result?.interactionPoints) {
+        if ((result as Record<string, unknown>)?.['interactionPoints']) {
+          const r = result as Record<string, unknown>;
           return (
             <PnCurve
-              points={result.interactionPoints}
-              Pu={result.axialLoad ?? 0}
-              Mu={result.maxMoment ?? 0}
-              sectionDesc={`RC ${result.b ?? 400}×${result.h ?? 400} mm`}
+              points={r['interactionPoints'] as { phiPn: number; phiMn: number }[]}
+              Pu={Number(r['axialLoad'] ?? 0)}
+              Mu={Number(r['maxMoment'] ?? 0)}
+              sectionDesc={`RC ${Number(r['b'] ?? 400)}×${Number(r['h'] ?? 400)} mm`}
               width={420}
               height={400}
             />
@@ -412,55 +420,57 @@ function CivilContent() {
 // ═══════════════════════════════════════════
 
 /** 根據工具類型與結果提取關鍵數值 */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getKeyValues(tool: ToolCategory, result: any): { label: string; value: string; unit?: string; highlight?: boolean; safe?: boolean; danger?: boolean }[] {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const items: any[] = [];
+function getKeyValues(tool: ToolCategory, result: CalculationResult): KeyValueItem[] {
+  const r = result as Record<string, unknown>;
+  const n = (v: unknown): number => (typeof v === 'number' ? v : 0);
+  const s = (v: unknown): string => (typeof v === 'string' ? v : String(v ?? ''));
+  const b = (v: unknown): boolean => (typeof v === 'boolean' ? v : false);
+  const items: KeyValueItem[] = [];
 
   try {
     switch (tool) {
       case 'beam':
-        if (result.maxMoment !== undefined) {
-          items.push({ label: 'Mmax', value: result.maxMoment.toFixed(1), unit: 'kN·m', highlight: true });
-          items.push({ label: 'Vmax', value: result.maxShear.toFixed(1), unit: 'kN' });
-          items.push({ label: 'δmax', value: result.maxDeflection.toFixed(2), unit: 'mm' });
+        if (r['maxMoment'] !== undefined) {
+          items.push({ label: 'Mmax', value: n(r['maxMoment']).toFixed(1), unit: 'kN·m', highlight: true });
+          items.push({ label: 'Vmax', value: n(r['maxShear']).toFixed(1), unit: 'kN' });
+          items.push({ label: 'δmax', value: n(r['maxDeflection']).toFixed(2), unit: 'mm' });
           items.push({
             label: '狀態',
-            value: result.isSafe ? '🟢 安全' : '🔴 不合格',
-            safe: result.isSafe,
-            danger: !result.isSafe,
+            value: b(r['isSafe']) ? '🟢 安全' : '🔴 不合格',
+            safe: b(r['isSafe']),
+            danger: !b(r['isSafe']),
           });
         }
         break;
       case 'column':
-        if (result.slenderness !== undefined) {
-          items.push({ label: 'λ', value: result.slenderness.toFixed(1) });
-          items.push({ label: 'Pcr', value: result.criticalLoad.toFixed(1), unit: 'kN', highlight: true });
-          items.push({ label: 'Pa', value: result.allowableLoad.toFixed(1), unit: 'kN' });
+        if (r['slenderness'] !== undefined) {
+          items.push({ label: 'λ', value: n(r['slenderness']).toFixed(1) });
+          items.push({ label: 'Pcr', value: n(r['criticalLoad']).toFixed(1), unit: 'kN', highlight: true });
+          items.push({ label: 'Pa', value: n(r['allowableLoad']).toFixed(1), unit: 'kN' });
           items.push({
             label: '狀態',
-            value: result.isSafe ? '🟢 安全' : '🔴 不合格',
-            safe: result.isSafe,
-            danger: !result.isSafe,
+            value: b(r['isSafe']) ? '🟢 安全' : '🔴 不合格',
+            safe: b(r['isSafe']),
+            danger: !b(r['isSafe']),
           });
-        } else if (result.As_total !== undefined) {
-          items.push({ label: 'Ast', value: result.As_total.toFixed(0), unit: 'mm²', highlight: true });
-          items.push({ label: 'ρg', value: (result.rho_g * 100).toFixed(2), unit: '%' });
-          items.push({ label: 'φPn,max', value: result.phiPn_max.toFixed(1), unit: 'kN' });
+        } else if (r['As_total'] !== undefined) {
+          items.push({ label: 'Ast', value: n(r['As_total']).toFixed(0), unit: 'mm²', highlight: true });
+          items.push({ label: 'ρg', value: (n(r['rho_g']) * 100).toFixed(2), unit: '%' });
+          items.push({ label: 'φPn,max', value: n(r['phiPn_max']).toFixed(1), unit: 'kN' });
           items.push({
             label: '狀態',
-            value: result.isSafe ? '🟢 安全' : '🔴 不合格',
-            safe: result.isSafe,
-            danger: !result.isSafe,
+            value: b(r['isSafe']) ? '🟢 安全' : '🔴 不合格',
+            safe: b(r['isSafe']),
+            danger: !b(r['isSafe']),
           });
         }
         break;
       case 'slab':
-        if (result.h_provided !== undefined) {
-          items.push({ label: '版厚 h', value: result.h_provided.toFixed(0), unit: 'mm', highlight: true });
-          items.push({ label: 'Mu,x', value: result.Mu_x?.toFixed(1), unit: 'kN·m/m' });
-          items.push({ label: 'As,main', value: result.As_main_x?.toFixed(0), unit: 'mm²/m' });
-          const slabOK = result.isThicknessOK && result.isDeflectionOK;
+        if (r['h_provided'] !== undefined) {
+          items.push({ label: '版厚 h', value: n(r['h_provided']).toFixed(0), unit: 'mm', highlight: true });
+          items.push({ label: 'Mu,x', value: n(r['Mu_x']).toFixed(1), unit: 'kN·m/m' });
+          items.push({ label: 'As,main', value: n(r['As_main_x']).toFixed(0), unit: 'mm²/m' });
+          const slabOK = b(r['isThicknessOK']) && b(r['isDeflectionOK']);
           items.push({
             label: '狀態',
             value: slabOK ? '🟢 安全' : '🔴 不合格',
@@ -470,11 +480,11 @@ function getKeyValues(tool: ToolCategory, result: any): { label: string; value: 
         }
         break;
       case 'foundation':
-        if (result.B !== undefined) {
-          items.push({ label: '尺寸 B×L', value: `${result.B}×${result.L}`, unit: 'm', highlight: true });
-          items.push({ label: '厚度 H', value: result.H.toFixed(0), unit: 'mm' });
-          items.push({ label: 'q實際', value: result.q_actual?.toFixed(1), unit: 'kN/m²' });
-          const fok = result.isBearingOK && result.isThicknessOK && result.isShearOK;
+        if (r['B'] !== undefined) {
+          items.push({ label: '尺寸 B×L', value: `${s(r['B'])}×${s(r['L'])}`, unit: 'm', highlight: true });
+          items.push({ label: '厚度 H', value: n(r['H']).toFixed(0), unit: 'mm' });
+          items.push({ label: 'q實際', value: n(r['q_actual']).toFixed(1), unit: 'kN/m²' });
+          const fok = b(r['isBearingOK']) && b(r['isThicknessOK']) && b(r['isShearOK']);
           items.push({
             label: '狀態',
             value: fok ? '🟢 安全' : '🔴 不合格',
@@ -484,33 +494,34 @@ function getKeyValues(tool: ToolCategory, result: any): { label: string; value: 
         }
         break;
       case 'steel':
-        if (result.boltCount !== undefined) {
-          items.push({ label: '螺栓數', value: result.boltCount.toString(), unit: '支', highlight: true });
-          items.push({ label: 'φVn', value: result.shearCapacity?.toFixed(1), unit: 'kN' });
-          items.push({ label: 'φTn', value: result.tensionCapacity?.toFixed(1), unit: 'kN' });
-          const bok = result.isShearOK && result.isTensionOK;
+        if (r['boltCount'] !== undefined) {
+          items.push({ label: '螺栓數', value: s(r['boltCount']), unit: '支', highlight: true });
+          items.push({ label: 'φVn', value: n(r['shearCapacity']).toFixed(1), unit: 'kN' });
+          items.push({ label: 'φTn', value: n(r['tensionCapacity']).toFixed(1), unit: 'kN' });
+          const bok = b(r['isShearOK']) && b(r['isTensionOK']);
           items.push({
             label: '狀態',
             value: bok ? '🟢 安全' : '🔴 不合格',
             safe: bok,
             danger: !bok,
           });
-        } else if (result.capacity !== undefined) {
-          items.push({ label: '銲道容量', value: result.capacity.toFixed(1), unit: 'kN', highlight: true });
-          items.push({ label: '使用率', value: (result.ratio * 100).toFixed(1), unit: '%' });
+        } else if (r['capacity'] !== undefined) {
+          items.push({ label: '銲道容量', value: n(r['capacity']).toFixed(1), unit: 'kN', highlight: true });
+          items.push({ label: '使用率', value: (n(r['ratio']) * 100).toFixed(1), unit: '%' });
           items.push({
             label: '狀態',
-            value: result.isOK ? '🟢 安全' : '🔴 不合格',
-            safe: result.isOK,
-            danger: !result.isOK,
+            value: b(r['isOK']) ? '🟢 安全' : '🔴 不合格',
+            safe: b(r['isOK']),
+            danger: !b(r['isOK']),
           });
         }
         break;
       case 'load':
-        if (result.maxCombo) {
-          items.push({ label: '最不利組合', value: result.maxCombo.name, highlight: true });
-          items.push({ label: '最大值', value: result.maxCombo.value.toFixed(1), unit: 'kN' });
-          items.push({ label: '總載重', value: result.totalLoad?.toFixed(1), unit: 'kN' });
+        if (r['maxCombo']) {
+          const mc = r['maxCombo'] as ComboResult;
+          items.push({ label: '最不利組合', value: mc.name, highlight: true });
+          items.push({ label: '最大值', value: mc.value.toFixed(1), unit: 'kN' });
+          items.push({ label: '總載重', value: n(r['totalLoad']).toFixed(1), unit: 'kN' });
         }
         break;
     }
@@ -535,7 +546,8 @@ function DiagramPlaceholder({ icon, text }: { icon: string; text: string }) {
 }
 
 /** 柱示意圖 SVG（鋼柱） */
-function ColumnDiagram({ result, width, height }: { result: any; width: number; height: number }) {
+function ColumnDiagram({ result, width, height }: { result: CalculationResult; width: number; height: number }) {
+  const r = result as Record<string, unknown>;
   const MARGIN = { top: 20, right: 20, bottom: 30, left: 40 };
   const plotW = width - MARGIN.left - MARGIN.right;
   const plotH = height - MARGIN.top - MARGIN.bottom;
@@ -575,21 +587,21 @@ function ColumnDiagram({ result, width, height }: { result: any; width: number; 
       {/* 載重箭頭 */}
       <line x1={cx} y1={topY - 14} x2={cx} y2={topY + 4} stroke="#DC2626" strokeWidth="2" markerEnd="url(#arrowRed)" />
       <text x={cx} y={topY - 18} textAnchor="middle" fill="#DC2626" fontSize="10" fontFamily="monospace" fontWeight="600">
-        P = {result.axialLoad ?? '?'} kN
+        P = {String(r['axialLoad'] ?? '?')} kN
       </text>
 
       {/* 尺寸標註 */}
       <line x1={cx - colW / 2 - 4} y1={botY + 14} x2={cx + colW / 2 + 4} y2={botY + 14} stroke="#6B7280" strokeWidth="0.8" markerStart="url(#arrowGray)" markerEnd="url(#arrowGray)" />
       <text x={cx} y={botY + 26} textAnchor="middle" fill="#6B7280" fontSize="9" fontFamily="monospace">
-        L = {result.length ?? '?'} m
+        L = {String(r['length'] ?? '?')} m
       </text>
 
       {/* 結果標籤 */}
-      {result.isSafe !== undefined && (
+      {r['isSafe'] !== undefined && (
         <g>
-          <rect x={MARGIN.left + 4} y={topY + 4} width={80} height={20} rx="4" fill={result.isSafe ? '#16A34A' : '#DC2626'} opacity="0.9" />
+          <rect x={MARGIN.left + 4} y={topY + 4} width={80} height={20} rx="4" fill={!!r['isSafe'] ? '#16A34A' : '#DC2626'} opacity="0.9" />
           <text x={MARGIN.left + 44} y={topY + 16} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">
-            {result.isSafe ? '🟢 安全' : '🔴 不合格'}
+            {!!r['isSafe'] ? '🟢 安全' : '🔴 不合格'}
           </text>
         </g>
       )}
@@ -605,7 +617,8 @@ function ColumnDiagram({ result, width, height }: { result: any; width: number; 
 }
 
 /** 版示意圖 SVG */
-function SlabDiagram({ result, width, height }: { result: any; width: number; height: number }) {
+function SlabDiagram({ result, width, height }: { result: CalculationResult; width: number; height: number }) {
+  const r = result as Record<string, unknown>;
   const MARGIN = 20;
   const plotW = width - MARGIN * 2;
   const plotH = height - MARGIN * 2;
@@ -646,13 +659,13 @@ function SlabDiagram({ result, width, height }: { result: any; width: number; he
       {/* 跨度標註 */}
       <line x1={MARGIN + 20} y1={slabY + slabH + 12} x2={MARGIN + plotW - 20} y2={slabY + slabH + 12} stroke="#6B7280" strokeWidth="0.8" markerStart="url(#arrowGray2)" markerEnd="url(#arrowGray2)" />
       <text x={MARGIN + plotW / 2} y={slabY + slabH + 24} textAnchor="middle" fill="#6B7280" fontSize="9" fontFamily="monospace">
-        L = {(result?.spanLx ?? 4000) / 1000}m
+        L = {Number(r['spanLx'] ?? 4000) / 1000}m
       </text>
 
       {/* 配筋資訊 */}
-      {result?.rebar_desc_x && (
+      {r['rebar_desc_x'] != null && (
         <text x={MARGIN + plotW / 2} y={height - 8} textAnchor="middle" fill="#FF6D00" fontSize="9" fontFamily="sans-serif" fontWeight="600">
-          {result.rebar_desc_x} | 版厚 h = {result.h_provided ?? '?'}mm
+          {String(r['rebar_desc_x'] ?? '')} | 版厚 h = {String(r['h_provided'] ?? '?')}mm
         </text>
       )}
 
@@ -664,7 +677,8 @@ function SlabDiagram({ result, width, height }: { result: any; width: number; he
 }
 
 /** 基腳示意圖 SVG */
-function FootingDiagram({ result, width, height }: { result: any; width: number; height: number }) {
+function FootingDiagram({ result, width, height }: { result: CalculationResult; width: number; height: number }) {
+  const r = result as Record<string, unknown>;
   const MARGIN = 20;
   const plotW = width - MARGIN * 2;
   const plotH = height - MARGIN * 2;
@@ -694,13 +708,13 @@ function FootingDiagram({ result, width, height }: { result: any; width: number;
 
       {/* 壓力 */}
       <text x={MARGIN + plotW / 2} y={MARGIN - 2} textAnchor="middle" fill="#DC2626" fontSize="9" fontFamily="monospace" fontWeight="600">
-        P = {result?.axialLoad ?? '?'} kN
+        P = {String(r['axialLoad'] ?? '?')} kN
       </text>
 
       {/* 尺寸標註 */}
       <line x1={footingX} y1={height - MARGIN + 5} x2={footingX + footingW} y2={height - MARGIN + 5} stroke="#6B7280" strokeWidth="0.8" markerStart="url(#arrowF)" markerEnd="url(#arrowF)" />
       <text x={footingX + footingW / 2} y={height - MARGIN + 17} textAnchor="middle" fill="#6B7280" fontSize="9" fontFamily="monospace">
-        B = {result?.B ?? '?'}m
+        B = {String(r['B'] ?? '?')}m
       </text>
 
       <marker id="arrowF" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
@@ -711,11 +725,12 @@ function FootingDiagram({ result, width, height }: { result: any; width: number;
 }
 
 /** 鋼構示意圖 SVG */
-function SteelDiagram({ result, width, height }: { result: any; width: number; height: number }) {
+function SteelDiagram({ result, width, height }: { result: CalculationResult; width: number; height: number }) {
+  const r = result as Record<string, unknown>;
   const MARGIN = 20;
   const cx = width / 2;
   const cy = height / 2;
-  const isBolt = result?.boltCount !== undefined;
+  const isBolt = r['boltCount'] !== undefined;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto rounded-lg bg-white">
@@ -740,7 +755,7 @@ function SteelDiagram({ result, width, height }: { result: any; width: number; h
           ))}
 
           <text x={cx} y={cy + 45} textAnchor="middle" fill="#FF6D00" fontSize="10" fontFamily="sans-serif" fontWeight="600">
-            {result.boltCount} 支 M{result.diameter ?? 22} 螺栓
+            {String(r['boltCount'] ?? '')} 支 M{String(r['diameter'] ?? 22)} 螺栓
           </text>
         </>
       ) : (
@@ -753,7 +768,7 @@ function SteelDiagram({ result, width, height }: { result: any; width: number; h
           <path d={`M${cx - 70},${cy + 15} L${cx + 70},${cy + 15} L${cx + 65},${cy + 5} L${cx - 65},${cy + 5} Z`} fill="#FF6D00" opacity="0.3" stroke="#FF6D00" strokeWidth="1" strokeDasharray="3,2" />
 
           <text x={cx} y={cy + 50} textAnchor="middle" fill="#FF6D00" fontSize="10" fontFamily="sans-serif" fontWeight="600">
-            銲道 w={result.weldSize ?? '?'}mm, L={result.weldLength ?? '?'}mm, {result.electrode ?? 'E70'}
+            銲道 w={String(r['weldSize'] ?? '?')}mm, L={String(r['weldLength'] ?? '?')}mm, {String(r['electrode'] ?? 'E70')}
           </text>
         </>
       )}
@@ -761,9 +776,9 @@ function SteelDiagram({ result, width, height }: { result: any; width: number; h
       {/* 安全標籤 */}
       {result && (
         <g>
-          <rect x={MARGIN + 4} y={MARGIN + 4} width={70} height={18} rx="4" fill={(result.isOK ?? result.isShearOK) ? '#16A34A' : '#DC2626'} opacity="0.9" />
+          <rect x={MARGIN + 4} y={MARGIN + 4} width={70} height={18} rx="4" fill={!!(r['isOK'] ?? r['isShearOK']) ? '#16A34A' : '#DC2626'} opacity="0.9" />
           <text x={MARGIN + 39} y={MARGIN + 15} textAnchor="middle" fill="white" fontSize="9" fontWeight="600">
-            {(result.isOK ?? result.isShearOK) ? '🟢 安全' : '🔴 不合格'}
+            {!!(r['isOK'] ?? r['isShearOK']) ? '🟢 安全' : '🔴 不合格'}
           </text>
         </g>
       )}
@@ -772,16 +787,15 @@ function SteelDiagram({ result, width, height }: { result: any; width: number; h
 }
 
 /** 載重組合示意圖 SVG */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function LoadDiagram({ result, width, height }: { result: any; width: number; height: number }) {
+function LoadDiagram({ result, width, height }: { result: CalculationResult; width: number; height: number }) {
+  const r = result as Record<string, unknown>;
   const MARGIN = { top: 25, right: 20, bottom: 30, left: 20 };
   const plotW = width - MARGIN.left - MARGIN.right;
   const plotH = height - MARGIN.top - MARGIN.bottom;
-  const combos = result?.comboResults ?? [];
+  const combos = (r['comboResults'] as ComboResult[]) ?? [];
   if (combos.length === 0) return <DiagramPlaceholder icon="⚖️" text="請添加荷載並計算組合" />;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const maxVal = Math.max(...combos.map((c: any) => c.value), 1);
+  const maxVal = Math.max(...combos.map((c: ComboResult) => c.value), 1);
   const barW = Math.min(40, (plotW - (combos.length - 1) * 8) / combos.length);
   const colors = ['#FF6D00', '#2563EB', '#16A34A', '#DC2626', '#7C3AED', '#0891B2'];
 
@@ -791,8 +805,7 @@ function LoadDiagram({ result, width, height }: { result: any; width: number; he
         載重組合比較
       </text>
 
-      {// eslint-disable-next-line @typescript-eslint/no-explicit-any
-      combos.map((combo: any, i: number) => {
+      {combos.map((combo: ComboResult, i: number) => {
         const barH = (combo.value / maxVal) * plotH * 0.85;
         const x = MARGIN.left + i * (barW + 8);
         const y = MARGIN.top + plotH - barH;
@@ -810,9 +823,9 @@ function LoadDiagram({ result, width, height }: { result: any; width: number; he
         );
       })}
 
-      {result.maxCombo && (
+      {r['maxCombo'] != null && (
         <text x={MARGIN.left + plotW / 2} y={height - 5} textAnchor="middle" fill="#FF6D00" fontSize="8" fontFamily="sans-serif">
-          最不利: {result.maxCombo.name} = {result.maxCombo.value.toFixed(1)} kN
+          最不利: {(r['maxCombo'] as ComboResult).name} = {(r['maxCombo'] as ComboResult).value.toFixed(1)} kN
         </text>
       )}
     </svg>

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -21,6 +19,7 @@ export default function Snake({ onGameOver }: { onGameOver?: (score: number) => 
   const [gameOver, setGameOver] = useState(false);
   const [paused, setPaused] = useState(false);
   const gameRef = useRef({ dir: "RIGHT" as Dir, snake: [{ x: 10, y: 10 }], food: { x: 15, y: 10 }, score: 0 });
+  const onGameOverRef = useRef(onGameOver);
 
   const spawnFood = useCallback((s: Point[]): Point => {
     const occupied = new Set(s.map(p => `${p.x},${p.y}`));
@@ -41,6 +40,10 @@ export default function Snake({ onGameOver }: { onGameOver?: (score: number) => 
     setFood({ x: 15, y: 10 });
     gameRef.current = { dir: "RIGHT", snake: [head], food: { x: 15, y: 10 }, score: 0 };
   };
+
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
 
   useEffect(() => {
     if (gameOver || paused) return;
@@ -68,7 +71,7 @@ export default function Snake({ onGameOver }: { onGameOver?: (score: number) => 
       if (g.snake.some(p => p.x === newHead.x && p.y === newHead.y)) {
         setGameOver(true);
         clearInterval(interval);
-        onGameOver?.(gameRef.current.score);
+        onGameOverRef.current?.(gameRef.current.score);
         return;
       }
 

@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { chromium } = require("playwright");
-const { mkdirSync } = require("fs");
-
 (async () => {
+  const { chromium } = await import("playwright");
+  const fs = await import("fs");
+  const { mkdirSync, readFileSync } = fs;
   mkdirSync("screenshots4", { recursive: true });
 
   const browser = await chromium.launch({ headless: true });
@@ -189,7 +188,7 @@ const { mkdirSync } = require("fs");
   await browser.close();
 
   // 計數 waitForTimeout 使用
-  const script = require("fs").readFileSync(__filename, "utf-8");
+  const script = readFileSync(__filename, "utf-8");
   const timeoutCount = (script.match(/waitForTimeout/g) || []).length;
 
   console.log("\n══════════ 測試結果 ══════════");

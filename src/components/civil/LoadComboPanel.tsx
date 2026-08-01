@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -17,8 +16,8 @@ import {
 } from "@/lib/civil/load";
 
 interface LoadComboPanelProps {
-  onResult?: (result: any) => void;
-  onParamsChange?: (params: Record<string, any>) => void;
+  onResult?: (result: Record<string, unknown> | null) => void;
+  onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
 const loadTypeOptions = (Object.entries(LOAD_TYPE_LABELS) as [LoadType, string][]).map(

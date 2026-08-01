@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -27,8 +26,8 @@ const edgeConditionOptions = [
 ];
 
 interface SlabFormProps {
-  onResult?: (result: SlabResult | null) => void;
-  onParamsChange?: (params: Record<string, any>) => void;
+  onResult?: (result: Record<string, unknown> | null) => void;
+  onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
 /**
@@ -70,7 +69,7 @@ export default function SlabForm({ onResult, onParamsChange }: SlabFormProps) {
   useEffect(() => {
     // 傳遞增強結果（含輸入參數供圖表使用）
     if (result) {
-      onResult?.({ ...result, spanLx, slabType } as any);
+      onResult?.({ ...result, spanLx, slabType });
     } else {
       onResult?.(result);
     }

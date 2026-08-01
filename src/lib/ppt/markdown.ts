@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // =============================================================================
 // PPT 編輯器 — Markdown 雙向轉換引擎（借鑑 Slidev）
 // =============================================================================
@@ -545,7 +544,7 @@ export function slidesToMarkdown(doc: PPTDocument): string {
 
     // Frontmatter
     const fm: Frontmatter = {};
-    if (slide.transition) fm.transition = slide.transition as any;
+    if (slide.transition) fm.transition = slide.transition as SlideTransition;
     if (slide.transitionDuration && slide.transitionDuration !== 600) fm.transitionDuration = slide.transitionDuration;
     if (slide.notes) fm.notes = slide.notes;
     if (slide.background) {

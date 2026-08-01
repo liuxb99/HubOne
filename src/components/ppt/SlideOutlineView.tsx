@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { usePPTStore } from "@/lib/ppt/store";
-import type { Slide, TextElement, SlideElement } from "@/lib/ppt/types";
+import type { Slide, TextElement, SlideElement, ShapeElement } from "@/lib/ppt/types";
 
 // ── 輔助：提取投影片文字摘要 ─────────────────────────────────────────────
 
@@ -35,7 +34,7 @@ function getNonTextSummaries(slide: Slide): string[] {
         case "image":
           return "🖼️ 圖片";
         case "shape":
-          return `🔲 ${(el as any).shapeType ?? "形狀"}`;
+          return `🔲 ${(el as ShapeElement).shapeType ?? "形狀"}`;
         default:
           return "📦 元件";
       }

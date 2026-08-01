@@ -21,13 +21,6 @@ export interface LeaderboardData {
 
 /**
  * useGameScore — 遊戲分數管理 Hook
- *
- * 功能：
- * 1. 從 localStorage 讀取/寫入個人最佳分數
- * 2. 向 API 提交分數（靜默降級，API 未就緒不影響玩家體驗）
- * 3. 從 API 或 localStorage 模擬載入排行榜
- *
- * @param gameName 遊戲識別名稱（如 "tetris", "snake"）
  */
 export function useGameScore(gameName: string) {
   const [personalBest, setPersonalBest] = useState<number>(0);
@@ -38,7 +31,6 @@ export function useGameScore(gameName: string) {
 
   // ── 個人最佳分數 ──
 
-  /** 從 localStorage 載入個人最佳 */
   const loadPersonalBest = useCallback(() => {
     try {
       const key = `pb_${gameName}`;
@@ -48,11 +40,10 @@ export function useGameScore(gameName: string) {
         if (!isNaN(value)) setPersonalBest(value);
       }
     } catch {
-      // localStorage 可能不可用（SSR 或隱私模式）
+      // localStorage 可能不可用
     }
   }, [gameName]);
 
-  /** 更新個人最佳分數 */
   const savePersonalBest = useCallback(
     (score: number) => {
       try {
@@ -70,9 +61,8 @@ export function useGameScore(gameName: string) {
     [gameName]
   );
 
-  // ── 本地模擬排行榜 ──
+  // ── 本地模擬排行榜（必須在 submitScore / fetchLeaderboard 之前宣告） ──
 
-  /** 從 localStorage 載入本地排行榜 */
   const loadLocalLeaderboard = useCallback(() => {
     try {
       const key = `scores_${gameName}`;
@@ -86,7 +76,6 @@ export function useGameScore(gameName: string) {
     }
   }, [gameName]);
 
-  /** 在 localStorage 中保存分數（API 不可用時降級使用） */
   const saveScoreLocal = useCallback(
     (score: number, level?: number) => {
       try {
@@ -102,7 +91,6 @@ export function useGameScore(gameName: string) {
           createdAt: new Date().toISOString(),
         });
 
-        // 保留前 50 筆，按分數降序排列
         const sorted = entries
           .sort((a, b) => b.score - a.score)
           .slice(0, 50);
@@ -118,7 +106,6 @@ export function useGameScore(gameName: string) {
 
   // ── 載入排行榜 ──
 
-  /** 從 API 或 localStorage 載入排行榜 */
   const fetchLeaderboard = useCallback(async () => {
     setLoadingLeaderboard(true);
     try {
@@ -145,7 +132,6 @@ export function useGameScore(gameName: string) {
           return;
         }
       }
-      // API 失敗，使用本地數據
       loadLocalLeaderboard();
     } catch {
       loadLocalLeaderboard();
@@ -156,17 +142,9 @@ export function useGameScore(gameName: string) {
 
   // ── 提交分數 ──
 
-  /**
-   * 提交分數
-   * - 自動更新個人最佳
-   * - 嘗試向 API 提交（無 userId 時使用匿名模式）
-   * - 提交成功後重新整理排行榜
-   */
   const submitScore = useCallback(
     async (score: number, level?: number) => {
-      // 更新個人最佳
       savePersonalBest(score);
-
       setSubmitting(true);
       try {
         await fetch("/api/games/scores", {
@@ -176,14 +154,11 @@ export function useGameScore(gameName: string) {
             game: gameName,
             score,
             level: level ?? 1,
-            // 暫用匿名 ID — 待認證系統就緒後替換
             userId: "anonymous",
           }),
         });
-        // 提交成功後重新載入排行榜
         await fetchLeaderboard();
       } catch {
-        // API 可能尚未就緒，使用 localStorage 模擬
         saveScoreLocal(score, level);
       } finally {
         setSubmitting(false);
@@ -201,7 +176,7 @@ export function useGameScore(gameName: string) {
     fetchLeaderboard();
   }, [loadPersonalBest, fetchLeaderboard]);
 
-  // ── 重置本地數據（開發用） ──
+  // ── 重置本地數據 ──
 
   const resetLocalData = useCallback(() => {
     try {

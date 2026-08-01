@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -24,8 +23,8 @@ const kFactorOptions = K_FACTOR_INFO.map((k) => ({
 }));
 
 interface ColumnFormProps {
-  onResult?: (result: ColumnResult | RCColumnResult | null) => void;
-  onParamsChange?: (params: Record<string, any>) => void;
+  onResult?: (result: Record<string, unknown> | null) => void;
+  onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
 /**
@@ -93,9 +92,9 @@ export default function ColumnForm({ onResult, onParamsChange }: ColumnFormProps
         Mu: rcMu,
         b: rcB,
         h: rcH,
-      }) as any);
+      }));
     } else {
-      onResult?.(result);
+      onResult?.(result as unknown as Record<string, unknown> | null);
     }
   }, [result, isRC, rcResult, rcPu, rcMu, rcB, rcH, onResult]);
 

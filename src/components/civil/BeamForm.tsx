@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -29,7 +28,7 @@ interface LoadItem {
 
 interface BeamFormProps {
   onResult?: (result: BeamResult | null) => void;
-  onParamsChange?: (params: Record<string, any>) => void;
+  onParamsChange?: (params: Record<string, unknown>) => void;
 }
 
 /**
@@ -114,7 +113,7 @@ export default function BeamForm({ onResult, onParamsChange }: BeamFormProps) {
     });
   }, []);
 
-  const updateLoad = useCallback((id: string, field: keyof LoadItem, value: any) => {
+  const updateLoad = useCallback((id: string, field: keyof LoadItem, value: number | string) => {
     setLoads((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
   }, []);
 

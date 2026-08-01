@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -42,11 +40,6 @@ export default function Toolbar({ onOpenTemplates, onStartPresent, onExport, onI
   const [fontFamilyOpen, setFontFamilyOpen] = useState(false);
   const fontSizeRef = useRef<HTMLDivElement>(null);
   const fontFamilyRef = useRef<HTMLDivElement>(null);
-
-  // 同步 titleDraft
-  useEffect(() => {
-    setTitleDraft(doc.title);
-  }, [doc.title]);
 
   // 編輯標題
   const startTitleEdit = useCallback(() => {
@@ -194,7 +187,9 @@ export default function Toolbar({ onOpenTemplates, onStartPresent, onExport, onI
   // ── 儲存指示 ──────────────────────────────────────────────────────────
 
   const [saved, setSaved] = useState(true);
+  const savedInitRef = useRef(true);
   useEffect(() => {
+    if (savedInitRef.current) { savedInitRef.current = false; return; }
     setSaved(false);
     const timer = setTimeout(() => setSaved(true), 1500);
     return () => clearTimeout(timer);

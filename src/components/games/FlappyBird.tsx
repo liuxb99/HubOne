@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -31,6 +29,15 @@ export default function FlappyBird({ onGameOver }: { onGameOver?: (score: number
     gameOver: false,
     started: false,
   });
+  const onGameOverRef = useRef(onGameOver);
+  const bestScoreRef = useRef(bestScore);
+
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
+  useEffect(() => {
+    bestScoreRef.current = bestScore;
+  }, [bestScore]);
 
   const reset = useCallback(() => {
     const s = stateRef.current;
@@ -105,8 +112,8 @@ export default function FlappyBird({ onGameOver }: { onGameOver?: (score: number
         if (s.birdY + BIRD_R > CANVAS_H - 40 || s.birdY - BIRD_R < 0) {
           s.gameOver = true;
           setGameOver(true);
-          if (s.score > bestScore) setBestScore(s.score);
-          onGameOver?.(s.score);
+          if (s.score > bestScoreRef.current) setBestScore(s.score);
+          onGameOverRef.current?.(s.score);
         }
 
         // Pipe collision
@@ -115,8 +122,8 @@ export default function FlappyBird({ onGameOver }: { onGameOver?: (score: number
             if (birdTop < p.gapY || birdBottom > p.gapY + PIPE_GAP) {
               s.gameOver = true;
               setGameOver(true);
-              if (s.score > bestScore) setBestScore(s.score);
-              onGameOver?.(s.score);
+              if (s.score > bestScoreRef.current) setBestScore(s.score);
+              onGameOverRef.current?.(s.score);
               break;
             }
           }
@@ -243,7 +250,7 @@ export default function FlappyBird({ onGameOver }: { onGameOver?: (score: number
 
     animId = requestAnimationFrame(update);
     return () => cancelAnimationFrame(animId);
-  }, [gameOver, bestScore]);
+  }, [gameOver]);
 
   return (
     <div className="flex flex-col sm:flex-row gap-6 items-center">

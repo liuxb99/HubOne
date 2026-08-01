@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -33,6 +31,19 @@ export default function Breakout({ onGameOver }: { onGameOver?: (score: number) 
     lives: 3,
     running: false,
   });
+  const gameOverRef = useRef(gameOver);
+  const wonRef = useRef(won);
+  const onGameOverRef = useRef(onGameOver);
+
+  useEffect(() => {
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
+  useEffect(() => {
+    wonRef.current = won;
+  }, [won]);
+  useEffect(() => {
+    onGameOverRef.current = onGameOver;
+  }, [onGameOver]);
 
   const initBricks = (): Brick[] => {
     const bricks: Brick[] = [];
@@ -100,7 +111,7 @@ export default function Breakout({ onGameOver }: { onGameOver?: (score: number) 
       if (b.y + BALL_R >= H) {
         g.lives--;
         setLives(g.lives);
-        if (g.lives <= 0) { g.running = false; setGameOver(true); onGameOver?.(g.score); draw(); return; }
+        if (g.lives <= 0) { g.running = false; setGameOver(true); onGameOverRef.current?.(g.score); draw(); return; }
         b.x = W / 2; b.y = H - 40;
         b.dx = 3; b.dy = -3;
         g.running = false;
@@ -128,7 +139,7 @@ export default function Breakout({ onGameOver }: { onGameOver?: (score: number) 
       if (g.bricks.every(b => !b.alive)) {
         g.running = false;
         setWon(true);
-        onGameOver?.(g.score);
+        onGameOverRef.current?.(g.score);
       }
 
       draw();
@@ -182,7 +193,7 @@ export default function Breakout({ onGameOver }: { onGameOver?: (score: number) 
     };
 
     const handleClick = () => {
-      if (!g.running && !gameOver && !won) {
+      if (!g.running && !gameOverRef.current && !wonRef.current) {
         g.running = true;
         setStarted(true);
       }
@@ -200,7 +211,6 @@ export default function Breakout({ onGameOver }: { onGameOver?: (score: number) 
     canvas.addEventListener("click", onClick);
 
     animId = requestAnimationFrame(update);
-    resetGame();
 
     return () => {
       cancelAnimationFrame(animId);
@@ -208,7 +218,7 @@ export default function Breakout({ onGameOver }: { onGameOver?: (score: number) 
       canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("click", onClick);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 items-center">

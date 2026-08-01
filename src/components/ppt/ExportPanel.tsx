@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -31,30 +30,24 @@ interface ExportPanelProps {
 export default function ExportPanel({ open, onClose }: ExportPanelProps) {
   const { doc } = usePPTStore();
   const [format, setFormat] = useState<ExportFormat>("html");
-  const [preview, setPreview] = useState("");
   const [copied, setCopied] = useState(false);
 
   // 產生預覽內容
-  useEffect(() => {
-    if (!open) return;
+  const preview = useMemo(() => {
+    if (!open) return "";
     try {
       switch (format) {
-        case "html": {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setPreview(exportToHTML(doc));
-          break;
-        }
-        case "markdown": {
-          setPreview(slidesToMarkdown(doc));
-          break;
-        }
-        case "text": {
-          setPreview(slidesToText(doc));
-          break;
-        }
+        case "html":
+          return exportToHTML(doc);
+        case "markdown":
+          return slidesToMarkdown(doc);
+        case "text":
+          return slidesToText(doc);
+        default:
+          return "";
       }
-    } catch (err) {
-      setPreview(`⚠️ 匯出失敗：${err}`);
+    } catch (err: unknown) {
+      return `⚠️ 匯出失敗：${err instanceof Error ? err.message : String(err)}`;
     }
   }, [format, doc, open]);
 

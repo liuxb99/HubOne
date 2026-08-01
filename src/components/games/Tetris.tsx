@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -86,14 +85,17 @@ export default function Tetris({ onGameOver }: { onGameOver?: (score: number, le
     gameOver: false, paused: false,
   }));
   const stateRef = useRef(state);
-  // eslint-disable-next-line react-hooks/refs
-  stateRef.current = state;
+  useEffect(() => {
+    stateRef.current = state;
+  });
 
   // 遊戲結束時回呼父層
+  const prevGameOverRef = useRef(state.gameOver);
   useEffect(() => {
-    if (state.gameOver && state.score > 0) {
+    if (state.gameOver && !prevGameOverRef.current && state.score > 0) {
       onGameOver?.(state.score, state.level);
     }
+    prevGameOverRef.current = state.gameOver;
   }, [state.gameOver, state.score, state.level, onGameOver]);
   const dropTimer = useRef<number | undefined>(undefined);
 

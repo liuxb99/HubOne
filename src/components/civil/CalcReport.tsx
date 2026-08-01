@@ -1,9 +1,15 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { cn } from "@/lib/utils";
 import type { BeamResult } from "@/lib/civil/beam";
 import type { ColumnResult, RCColumnResult } from "@/lib/civil/column";
+
+function displayValue(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return v.toString();
+  return JSON.stringify(v);
+}
 import type { SlabResult } from "@/lib/civil/slab";
 import type { FootingResult } from "@/lib/civil/foundation";
 import type { BoltConnection, WeldResult } from "@/lib/civil/steel";
@@ -30,7 +36,7 @@ type ResultType = 'beam' | 'column' | 'slab' | 'footing' | 'steel';
 function detectResultType(result: unknown): ResultType {
   if (!result || typeof result !== 'object') return 'beam';
 
-  const r = result as any;
+  const r = result as Record<string, unknown>;
 
   if ('maxMoment' in r && 'maxShear' in r) return 'beam';
   if ('slenderness' in r || 'criticalLoad' in r) return 'column';
@@ -64,12 +70,12 @@ function isWeldResult(r: unknown): r is WeldResult {
 
 /** 判斷是否為鋼柱 (ColumnResult) 而非 RC柱 (RCColumnResult) */
 function isSteelColumn(r: unknown): r is ColumnResult {
-  return !!r && 'slenderness' in (r as any);
+  return !!r && 'slenderness' in (r as Record<string, unknown>);
 }
 
 /** 判斷是否為 RC柱 */
 function isRCColumn(r: unknown): r is RCColumnResult {
-  return !!r && 'As_total' in (r as any);
+  return !!r && 'As_total' in (r as Record<string, unknown>);
 }
 
 // ═══════════════════════════════════════════
@@ -78,9 +84,9 @@ function isRCColumn(r: unknown): r is RCColumnResult {
 
 interface CalcReportProps {
   /** 計算結果（不再需要手動傳入 type，系統會自動偵測） */
-  result: BeamResult | ColumnResult | RCColumnResult | SlabResult | FootingResult | BoltConnection | WeldResult | null;
+  result: Record<string, unknown> | null;
   /** 輸入參數（用於顯示摘要） */
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   /** 額外 class */
   className?: string;
   /** 是否顯示公式推導，預設 true */
@@ -224,6 +230,16 @@ export default function CalcReport({
   const isFooting = type === 'footing';
   const isSteel = type === 'steel';
 
+  const paramEntries: [string, unknown][] = Object.entries(params ?? {});
+
+  const paramsSection = paramEntries.length === 0 ? (
+    <p className="text-xs text-[var(--text-tertiary)] italic">無輸入參數</p>
+  ) : (
+    paramEntries.map(([key, value]) => (
+      <ResultRow key={key} label={key} value={displayValue(value)} />
+    ))
+  );
+
   // ── 空狀態 ──
   if (!result) {
     return (
@@ -254,7 +270,7 @@ export default function CalcReport({
     if (isSteel && isWeldResult(result)) {
       return result.isOK;
     }
-    return (result as any).isSafe === true || (result as any).isSafe === undefined;
+    return (result as Record<string, unknown>)['isSafe'] === true || (result as Record<string, unknown>)['isSafe'] === undefined;
   })();
 
   // ── 計算書標題 ──
@@ -275,7 +291,7 @@ export default function CalcReport({
     }
   })();
 
-  const hasSection = 'section' in (result as any);
+  const hasSection = 'section' in (result as Record<string, unknown>);
 
   return (
     <div
@@ -309,25 +325,19 @@ export default function CalcReport({
             一、輸入參數
             ═══════════════════════════════════ */}
         <SectionTitle title="一、輸入參數" />
-        {Object.keys(params).length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)] italic">無輸入參數</p>
-        ) : (
-          Object.entries(params).map(([key, value]) => (
-            <ResultRow key={key} label={key} value={String(value)} />
-          ))
-        )}
+        {paramsSection}
 
         {/* ═══════════════════════════════════
             二、斷面資訊（梁/鋼柱共用）
             ═══════════════════════════════════ */}
-        {hasSection && (result as any).section && (
+        {hasSection && (result as Record<string, unknown>)['section'] != null && (
           <>
             <SectionTitle title="二、斷面資訊" />
-            <ResultRow label="型號" value={(result as any).section.name} />
-            <ResultRow label="斷面積" value={(result as any).section.area} unit="cm²" />
-            <ResultRow label="慣性矩 Ix" value={(result as any).section.Ix} unit="cm⁴" />
-            <ResultRow label="斷面模數 Zx" value={(result as any).section.Zx} unit="cm³" />
-            <ResultRow label="單位重量" value={(result as any).section.weight} unit="kg/m" />
+            <ResultRow label="型號" value={((result as Record<string, unknown>)['section'] as Record<string, unknown>)['name'] as string} />
+            <ResultRow label="斷面積" value={((result as Record<string, unknown>)['section'] as Record<string, unknown>)['area'] as number} unit="cm²" />
+            <ResultRow label="慣性矩 Ix" value={((result as Record<string, unknown>)['section'] as Record<string, unknown>)['Ix'] as number} unit="cm⁴" />
+            <ResultRow label="斷面模數 Zx" value={((result as Record<string, unknown>)['section'] as Record<string, unknown>)['Zx'] as number} unit="cm³" />
+            <ResultRow label="單位重量" value={((result as Record<string, unknown>)['section'] as Record<string, unknown>)['weight'] as number} unit="kg/m" />
           </>
         )}
 
@@ -349,16 +359,16 @@ export default function CalcReport({
         {/* ── 梁結果 ── */}
         {isBeam && (
           <>
-            <ResultRow label="最大彎矩 Mmax" value={(result as BeamResult).maxMoment} unit="kN·m" highlight code="§5.2" />
-            <ResultRow label="最大剪力 Vmax" value={(result as BeamResult).maxShear} unit="kN" code="§5.3" />
-            <ResultRow label="最大撓度 δmax" value={(result as BeamResult).maxDeflection} unit="mm" code="§6.1" />
-            <ResultRow label="左端反力" value={(result as BeamResult).reactions.left} unit="kN" />
-            <ResultRow label="右端反力" value={(result as BeamResult).reactions.right} unit="kN" />
-            {(result as BeamResult).requiredZx !== undefined && (
-              <ResultRow label="需求斷面模數 Zreq" value={(result as BeamResult).requiredZx!} unit="cm³" highlight />
+            <ResultRow label="最大彎矩 Mmax" value={(result as unknown as BeamResult).maxMoment} unit="kN·m" highlight code="§5.2" />
+            <ResultRow label="最大剪力 Vmax" value={(result as unknown as BeamResult).maxShear} unit="kN" code="§5.3" />
+            <ResultRow label="最大撓度 δmax" value={(result as unknown as BeamResult).maxDeflection} unit="mm" code="§6.1" />
+            <ResultRow label="左端反力" value={(result as unknown as BeamResult).reactions.left} unit="kN" />
+            <ResultRow label="右端反力" value={(result as unknown as BeamResult).reactions.right} unit="kN" />
+            {(result as unknown as BeamResult).requiredZx !== undefined && (
+              <ResultRow label="需求斷面模數 Zreq" value={(result as unknown as BeamResult).requiredZx!} unit="cm³" highlight />
             )}
-            {(result as BeamResult).safetyRatio !== undefined && (
-              <ResultRow label="使用率" value={(result as BeamResult).safetyRatio!} highlight />
+            {(result as unknown as BeamResult).safetyRatio !== undefined && (
+              <ResultRow label="使用率" value={(result as unknown as BeamResult).safetyRatio!} highlight />
             )}
           </>
         )}
@@ -542,7 +552,7 @@ export default function CalcReport({
         {/* ═══════════════════════════════════
             RC 配筋結果（梁）
             ═══════════════════════════════════ */}
-        {(result as BeamResult).rcResult && (
+        {(result as unknown as BeamResult).rcResult && (
           <>
             <SectionTitle title="四、RC 配筋結果" code="ACI 318-19 §9~§22" />
 
@@ -555,36 +565,36 @@ export default function CalcReport({
               description="最大鋼筋比，拉力控制斷面（ACI 318-19 §9.3.1.1）"
             />
 
-            <ResultRow label="拉力筋 As" value={(result as BeamResult).rcResult!.As_tension} unit="mm²" highlight />
-            <ResultRow label="壓力筋 As'" value={(result as BeamResult).rcResult!.As_compression} unit="mm²" />
-            <ResultRow label="剪力筋 Av" value={(result as BeamResult).rcResult!.As_shear} unit="mm²" />
-            <ResultRow label="拉力筋比 ρ" value={(result as BeamResult).rcResult!.rho} highlight code="§9.6" />
-            <ResultRow label="最大筋比 ρ_max" value={(result as BeamResult).rcResult!.rho_max} code="§10.3.5" />
-            <ResultRow label="最小筋比 ρ_min" value={(result as BeamResult).rcResult!.rho_min} code="§9.6.1.2" />
-            <ResultRow label="設計彎矩強度 φMn" value={(result as BeamResult).rcResult!.phiMn} unit="kN·m" highlight />
-            <ResultRow label="設計剪力強度 φVn" value={(result as BeamResult).rcResult!.phiVn} unit="kN" highlight />
-            <ResultRow label="剪力筋間距" value={(result as BeamResult).rcResult!.spacing} unit="mm" />
+            <ResultRow label="拉力筋 As" value={(result as unknown as BeamResult).rcResult!.As_tension} unit="mm²" highlight />
+            <ResultRow label="壓力筋 As'" value={(result as unknown as BeamResult).rcResult!.As_compression} unit="mm²" />
+            <ResultRow label="剪力筋 Av" value={(result as unknown as BeamResult).rcResult!.As_shear} unit="mm²" />
+            <ResultRow label="拉力筋比 ρ" value={(result as unknown as BeamResult).rcResult!.rho} highlight code="§9.6" />
+            <ResultRow label="最大筋比 ρ_max" value={(result as unknown as BeamResult).rcResult!.rho_max} code="§10.3.5" />
+            <ResultRow label="最小筋比 ρ_min" value={(result as unknown as BeamResult).rcResult!.rho_min} code="§9.6.1.2" />
+            <ResultRow label="設計彎矩強度 φMn" value={(result as unknown as BeamResult).rcResult!.phiMn} unit="kN·m" highlight />
+            <ResultRow label="設計剪力強度 φVn" value={(result as unknown as BeamResult).rcResult!.phiVn} unit="kN" highlight />
+            <ResultRow label="剪力筋間距" value={(result as unknown as BeamResult).rcResult!.spacing} unit="mm" />
 
             <SectionTitle title="配筋配置" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
               <div className="p-2.5 rounded bg-[var(--bg-tertiary)] text-center">
                 <div className="text-[10px] text-[var(--text-tertiary)]">拉力筋</div>
                 <div className="text-sm font-mono font-bold text-[var(--theme-color)]">
-                  {(result as BeamResult).rcResult!.bars_tension.join(', ')}
+                  {(result as unknown as BeamResult).rcResult!.bars_tension.join(', ')}
                 </div>
               </div>
               <div className="p-2.5 rounded bg-[var(--bg-tertiary)] text-center">
                 <div className="text-[10px] text-[var(--text-tertiary)]">壓力筋</div>
                 <div className="text-sm font-mono font-bold text-[var(--text-secondary)]">
-                  {(result as BeamResult).rcResult!.bars_compression.length > 0
-                    ? (result as BeamResult).rcResult!.bars_compression.join(', ')
+                  {(result as unknown as BeamResult).rcResult!.bars_compression.length > 0
+                    ? (result as unknown as BeamResult).rcResult!.bars_compression.join(', ')
                     : '—'}
                 </div>
               </div>
               <div className="p-2.5 rounded bg-[var(--bg-tertiary)] text-center">
                 <div className="text-[10px] text-[var(--text-tertiary)]">剪力筋</div>
                 <div className="text-sm font-mono font-bold text-[var(--text-primary)]">
-                  {(result as BeamResult).rcResult!.stirrup}
+                  {(result as unknown as BeamResult).rcResult!.stirrup}
                 </div>
               </div>
             </div>
@@ -593,14 +603,14 @@ export default function CalcReport({
             <div
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded text-sm font-medium',
-                (result as BeamResult).rcResult!.isTensionControlled
+                (result as unknown as BeamResult).rcResult!.isTensionControlled
                   ? 'bg-success/10 text-success'
                   : 'bg-warning/10 text-warning',
               )}
             >
-              <span>{(result as BeamResult).rcResult!.isTensionControlled ? '✅' : '⚠️'}</span>
+              <span>{(result as unknown as BeamResult).rcResult!.isTensionControlled ? '✅' : '⚠️'}</span>
               <span>
-                {(result as BeamResult).rcResult!.isTensionControlled
+                {(result as unknown as BeamResult).rcResult!.isTensionControlled
                   ? '拉力控制斷面 (εt ≥ 0.005)'
                   : '過渡區斷面 (εy < εt < 0.005)'}
               </span>
@@ -609,7 +619,7 @@ export default function CalcReport({
         )}
 
         {/* ── RC 柱結果 ── */}
-        {(isSteelColumn(result) ? (result as ColumnResult).rcResult : null) && (
+        {(isSteelColumn(result) ? (result as unknown as ColumnResult).rcResult : null) && (
           <>
             <SectionTitle title="四、RC 柱配筋結果" code="ACI 318-19 §10, §22" />
 
@@ -620,49 +630,49 @@ export default function CalcReport({
 
             <ResultRow
               label="總鋼筋面積 A_st"
-              value={(result as ColumnResult).rcResult!.As_total}
+              value={(result as unknown as ColumnResult).rcResult!.As_total}
               unit="mm²"
               highlight
             />
             <ResultRow
               label="鋼筋比 ρ_g"
-              value={(result as ColumnResult).rcResult!.rho_g}
+              value={(result as unknown as ColumnResult).rcResult!.rho_g}
               highlight
               code="§10.6"
             />
             <ResultRow
               label="最小 ρ_g_min"
-              value={(result as ColumnResult).rcResult!.rho_g_min}
+              value={(result as unknown as ColumnResult).rcResult!.rho_g_min}
               code="§10.6.1.1"
             />
             <ResultRow
               label="最大 ρ_g_max"
-              value={(result as ColumnResult).rcResult!.rho_g_max}
+              value={(result as unknown as ColumnResult).rcResult!.rho_g_max}
               code="§10.6.1.2"
             />
             <ResultRow
               label="最大軸壓強度 φPn_max"
-              value={(result as ColumnResult).rcResult!.phiPn_max}
+              value={(result as unknown as ColumnResult).rcResult!.phiPn_max}
               unit="kN"
               highlight
               code="§22.4"
             />
             <ResultRow
               label="圍束間距"
-              value={(result as ColumnResult).rcResult!.tieSpacing}
+              value={(result as unknown as ColumnResult).rcResult!.tieSpacing}
               unit="mm"
               code="§25.7.2"
             />
             <ResultRow
               label="使用率"
-              value={(result as ColumnResult).rcResult!.safetyRatio}
+              value={(result as unknown as ColumnResult).rcResult!.safetyRatio}
               highlight
             />
 
             <div className="p-2.5 rounded bg-[var(--bg-tertiary)] text-center mt-2">
               <div className="text-[10px] text-[var(--text-tertiary)]">配筋配置</div>
               <div className="text-sm font-mono font-bold text-[var(--theme-color)]">
-                {(result as ColumnResult).rcResult!.bars.join(' | ')}
+                {(result as unknown as ColumnResult).rcResult!.bars.join(' | ')}
               </div>
             </div>
           </>

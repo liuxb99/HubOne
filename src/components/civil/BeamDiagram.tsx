@@ -52,7 +52,7 @@ const BEAM_BAR = 14;       // 梁本體高度
 const SUP_SZ = 10;         // 支座箭頭大小
 
 interface BeamDiagramProps {
-  result: BeamResult | null;
+  result: Record<string, unknown> | null;
   width?: number;
   height?: number;
   className?: string;
@@ -84,7 +84,8 @@ export default function BeamDiagram({
     );
   }
 
-  const { length, momentPoints, shearPoints, deflectionPoints, maxMoment, maxShear, supportType, continuousResult, rcResult } = result;
+  const beamResult = result as unknown as BeamResult;
+  const { length, momentPoints, shearPoints, deflectionPoints, maxMoment, maxShear, supportType, continuousResult, rcResult } = beamResult;
 
   // 連續梁
   if (continuousResult && continuousResult.spans.length > 1) {
@@ -149,7 +150,7 @@ export default function BeamDiagram({
   const shFill = `${shPath} L${scaleX(length)},${shCenter} L${scaleX(0)},${shCenter} Z`;
 
   // ── 變形圖 ──
-  const absDef = Math.max(Math.abs(result.maxDeflection), 0.01);
+  const absDef = Math.max(Math.abs(beamResult.maxDeflection), 0.01);
   const defCenter = chartCenter(defSecTop);
   const defScale = (chartH * 0.65) / absDef;
   const defY = (d: number) => defCenter + d * defScale;
@@ -395,7 +396,7 @@ export default function BeamDiagram({
             x={plotLeft + plotW} y={defSecTop + 13}
             textAnchor="end" fill={MIDAS.deflection} fontSize="9" fontWeight="700" fontFamily="var(--font-mono)"
           >
-            δmax = {result.maxDeflection.toFixed(2)} mm
+            δmax = {beamResult.maxDeflection.toFixed(2)} mm
           </text>
 
           {/* 變形曲線（虛線） */}
@@ -405,11 +406,11 @@ export default function BeamDiagram({
         {/* ═══════════════════════════════════════
             安全狀態標籤
             ═══════════════════════════════════════ */}
-        {result.section && (
+        {beamResult.section && (
           <g>
-            <rect x={width - 90} y={2} width="82" height="18" rx="4" fill={result.isSafe ? '#F0FDF4' : '#FEF2F2'} stroke={result.isSafe ? MIDAS.safe : MIDAS.danger} strokeWidth="0.5" />
-            <text x={width - 49} y={14} textAnchor="middle" fill={result.isSafe ? MIDAS.safe : MIDAS.danger} fontSize="9" fontWeight="700" fontFamily="var(--font-sans)">
-              {result.isSafe ? '🟢 安全' : '🔴 不合格'}
+            <rect x={width - 90} y={2} width="82" height="18" rx="4" fill={beamResult.isSafe ? '#F0FDF4' : '#FEF2F2'} stroke={beamResult.isSafe ? MIDAS.safe : MIDAS.danger} strokeWidth="0.5" />
+            <text x={width - 49} y={14} textAnchor="middle" fill={beamResult.isSafe ? MIDAS.safe : MIDAS.danger} fontSize="9" fontWeight="700" fontFamily="var(--font-sans)">
+              {beamResult.isSafe ? '🟢 安全' : '🔴 不合格'}
             </text>
           </g>
         )}
@@ -451,13 +452,13 @@ function ContinuousBeamSVG({
   const plotW = width - PAD.left - PAD.right;
   const plotLeft = PAD.left;
 
-  const totalLength = result.spans.reduce((sum, s) => sum + s.L, 0);
-  const spanStarts = result.spans.reduce(
-    (starts, span, i) => {
-      if (i === 0) return [0];
-      return [...starts, starts[i - 1] + result.spans[i - 1].L];
+  const { cumulative: totalLength, spanStarts } = result.spans.reduce(
+    (acc, span) => {
+      acc.spanStarts.push(acc.cumulative);
+      acc.cumulative += span.L;
+      return acc;
     },
-    [] as number[]
+    { cumulative: 0, spanStarts: [] as number[] }
   );
 
   const scaleX = (x: number) => plotLeft + (x / totalLength) * plotW;
