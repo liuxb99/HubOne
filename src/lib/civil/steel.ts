@@ -163,8 +163,8 @@ export function calcBoltConnection(
 
   // 若承受拉力 + 剪力組合（§J3.7）
   // Fnv' = 1.3 × Fnt - (Fnt / φ × Fnv) × fv ≤ Fnt
-  let Fnt = strength.Fnt;
-  let adjustedTension = false;
+  const Fnt = strength.Fnt;
+  const adjustedTension = false;
 
   if (Tu > 0 && Pu > 0) {
     steps.push(`同時承受剪力 Pu = ${Pu}kN 與拉力 Tu = ${Tu}kN`);
@@ -176,7 +176,7 @@ export function calcBoltConnection(
     // 抗拉所需數量
     const nTension = Math.ceil(Tu / (phi * Fnt * Ab / 1000));
     // 取較大者
-    let n = Math.max(nShear, nTension, 2);
+    const n = Math.max(nShear, nTension, 2);
     steps.push(`抗剪所需螺栓數：n ≥ ${Pu} / (0.75 × ${Fnv} × ${Ab} / 1000) = ${nShear}`);
     steps.push(`抗拉所需螺栓數：n ≥ ${Tu} / (0.75 × ${Fnt} × ${Ab} / 1000) = ${nTension}`);
     steps.push(`採用螺栓數：n = ${n}`);

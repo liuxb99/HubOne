@@ -48,7 +48,7 @@ export default function Snake({ onGameOver }: { onGameOver?: (score: number) => 
 
       const d = g.dir;
       const head = g.snake[0];
-      let newHead: Point = { x: head.x, y: head.y };
+      const newHead: Point = { x: head.x, y: head.y };
       switch (d) {
         case "UP": newHead.y--; break;
         case "DOWN": newHead.y++; break;

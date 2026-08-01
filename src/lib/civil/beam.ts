@@ -404,8 +404,8 @@ export function calcRCBeam(
     // C = 0.85×fc×a×b
     // T = As_tension × fy
     // C' = As_compression × fs'
-    let C = 0.85 * fc * a * b;
-    let T = As_tension * fy;
+    const C = 0.85 * fc * a * b;
+    const T = As_tension * fy;
     let C_prime = 0;
     if (As_compression > 0) {
       const eps_prime = epsilon_cu * (c - d_prime) / c;

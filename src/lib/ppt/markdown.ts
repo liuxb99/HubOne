@@ -298,7 +298,7 @@ function parseBlockToSlide(block: string, index: number, totalBlocks: number): S
 
   // 解析內容行
   let hasHeading = false;
-  let firstContentY = 80;
+  const firstContentY = 80;
 
   // 先找第一個標題來決定投影片類型
   for (const line of contentLines) {
