@@ -27,6 +27,8 @@ export type DigitalThreadView = {
   relations: DigitalThreadRelation[];
 };
 
+const SHA256_PATTERN = /^[a-f0-9]{64}$/i;
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
@@ -34,40 +36,64 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function asString(value: unknown): string {
-  return typeof value === "string" ? value : "";
+function requiredString(value: unknown, path: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`${path} must be a non-empty string`);
+  }
+  return value.trim();
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
+}
+
+function assertUnique(id: string, seen: Set<string>, path: string): void {
+  if (seen.has(id)) {
+    throw new Error(`Duplicate ${path} id: ${id}`);
+  }
+  seen.add(id);
 }
 
 export function parseDigitalThread(value: unknown): DigitalThreadSnapshot {
   const root = asRecord(value);
   if (root.schema_version !== "1.0") {
-    throw new Error(`Unsupported digital thread schema: ${String(root.schema_version ?? "missing")}`);
+    throw new Error(
+      `Unsupported digital thread schema: ${String(root.schema_version ?? "missing")}`,
+    );
   }
   if (!Array.isArray(root.entities) || !Array.isArray(root.relations)) {
     throw new Error("Digital thread entities and relations are required");
   }
 
+  const entityIds = new Set<string>();
   const entities = root.entities.map((item, index) => {
     const entity = asRecord(item);
-    const id = asString(entity.id);
-    const kind = asString(entity.kind);
-    const name = asString(entity.name);
-    if (!id || !kind || !name) {
-      throw new Error(`Invalid digital thread entity at index ${index}`);
-    }
-    return { id, kind, name, properties: asRecord(entity.properties) };
+    const id = requiredString(entity.id, `entities[${index}].id`);
+    assertUnique(id, entityIds, "entity");
+    return {
+      id,
+      kind: requiredString(entity.kind, `entities[${index}].kind`),
+      name: requiredString(entity.name, `entities[${index}].name`),
+      properties: asRecord(entity.properties),
+    };
   });
 
+  const relationIds = new Set<string>();
   const relations = root.relations.map((item, index) => {
     const relation = asRecord(item);
-    const id = asString(relation.id);
-    const from = asString(relation.from);
-    const to = asString(relation.to);
-    const kind = asString(relation.kind);
-    if (!id || !from || !to || !kind) {
-      throw new Error(`Invalid digital thread relation at index ${index}`);
+    const id = requiredString(relation.id, `relations[${index}].id`);
+    assertUnique(id, relationIds, "relation");
+    const from = requiredString(relation.from, `relations[${index}].from`);
+    const to = requiredString(relation.to, `relations[${index}].to`);
+    if (!entityIds.has(from) || !entityIds.has(to)) {
+      throw new Error(`Relation ${id} references an unknown entity`);
     }
-    return { id, from, to, kind };
+    return {
+      id,
+      from,
+      to,
+      kind: requiredString(relation.kind, `relations[${index}].kind`),
+    };
   });
 
   return { schema_version: "1.0", entities, relations };
@@ -77,34 +103,40 @@ export function buildDigitalThreadView(snapshot: DigitalThreadSnapshot): Digital
   const object = snapshot.entities.find((entity) => entity.kind === "engineering_object");
   const tools: DigitalThreadView["tools"] = [];
   const artifacts: DigitalThreadView["artifacts"] = [];
-  let esmId = "";
-  let ifcGuid = "";
+  let esmId: string | undefined;
+  let ifcGuid: string | undefined;
 
   for (const entity of snapshot.entities) {
     if (entity.kind === "tool_execution") {
       const data = asRecord(entity.properties.data);
-      esmId ||= asString(data.esm_id);
-      ifcGuid ||= asString(data.ifc_guid);
+      esmId ??= optionalString(data.esm_id);
+      ifcGuid ??= optionalString(data.ifc_guid);
       tools.push({
-        requestId: asString(entity.properties.request_id),
-        toolId: asString(entity.properties.tool_id),
-        status: asString(entity.properties.status),
+        requestId: requiredString(entity.properties.request_id, `${entity.id}.request_id`),
+        toolId: requiredString(entity.properties.tool_id, `${entity.id}.tool_id`),
+        status: requiredString(entity.properties.status, `${entity.id}.status`),
       });
     }
+
     if (entity.kind === "artifact") {
-      artifacts.push({
-        id: asString(entity.properties.artifact_id),
-        type: asString(entity.properties.artifact_type),
-        path: asString(entity.properties.path),
-        sha256: asString(entity.properties.sha256),
-      });
+      const id = requiredString(entity.properties.artifact_id, `${entity.id}.artifact_id`);
+      const type = requiredString(
+        entity.properties.artifact_type,
+        `${entity.id}.artifact_type`,
+      );
+      const path = requiredString(entity.properties.path, `${entity.id}.path`);
+      const sha256 = requiredString(entity.properties.sha256, `${entity.id}.sha256`);
+      if (!SHA256_PATTERN.test(sha256)) {
+        throw new Error(`${entity.id}.sha256 must be a 64-character SHA-256 digest`);
+      }
+      artifacts.push({ id, type, path, sha256: sha256.toLowerCase() });
     }
   }
 
   return {
     subject: object?.name ?? "engineering_work",
-    esmId: esmId || undefined,
-    ifcGuid: ifcGuid || undefined,
+    esmId,
+    ifcGuid,
     tools,
     artifacts,
     relations: snapshot.relations,
