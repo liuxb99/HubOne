@@ -49,4 +49,42 @@ describe("digital thread", () => {
       "Unsupported digital thread schema",
     );
   });
+
+  it("rejects duplicate entity ids", () => {
+    expect(() =>
+      parseDigitalThread({
+        ...snapshot,
+        entities: [...snapshot.entities, snapshot.entities[0]],
+      }),
+    ).toThrow("Duplicate entity id");
+  });
+
+  it("rejects dangling relations", () => {
+    expect(() =>
+      parseDigitalThread({
+        ...snapshot,
+        relations: [
+          { id: "relation-2", from: "object-1", to: "missing", kind: "drawn_as" },
+        ],
+      }),
+    ).toThrow("references an unknown entity");
+  });
+
+  it("rejects malformed artifact hashes", () => {
+    const malformed = structuredClone(snapshot);
+    malformed.entities[2].properties.sha256 = "not-a-sha";
+
+    expect(() => buildDigitalThreadView(parseDigitalThread(malformed))).toThrow(
+      "64-character SHA-256 digest",
+    );
+  });
+
+  it("rejects incomplete tool execution identity", () => {
+    const malformed = structuredClone(snapshot);
+    delete malformed.entities[1].properties.request_id;
+
+    expect(() => buildDigitalThreadView(parseDigitalThread(malformed))).toThrow(
+      "request_id must be a non-empty string",
+    );
+  });
 });
