@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -56,6 +57,7 @@ export default function PacMan({ onGameOver }: { onGameOver?: (score: number) =>
   const [won, setWon] = useState(false);
 
   const gridRef = useRef(getGrid(MAP));
+  // eslint-disable-next-line react-hooks/refs
   const totalDots = useRef(countDots(gridRef.current));
   const eaten = useRef(0);
 

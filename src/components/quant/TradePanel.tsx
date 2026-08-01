@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   getPositions,
   addPosition,
@@ -32,6 +32,7 @@ export default function TradePanel({ symbol, currentPrice }: TradePanelProps) {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const initializedRef = useRef(false);
 
   // 重新整理持倉與餘額
   const refresh = useCallback(() => {
@@ -40,6 +41,8 @@ export default function TradePanel({ symbol, currentPrice }: TradePanelProps) {
   }, []);
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
     refresh();
   }, [refresh]);
 

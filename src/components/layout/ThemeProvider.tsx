@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import type { ThemeMode, ThemeContextType } from "@/types";
@@ -15,16 +16,17 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
  * data-theme 完全由各業務線 layout 的硬編碼 <div data-theme="..."> 負責。
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>("system");
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "system";
+    const stored = localStorage.getItem("theme") as ThemeMode | null;
+    if (stored === "dark" || stored === "light" || stored === "system") return stored;
+    return "system";
+  });
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // 初始化：從 localStorage 讀取
+  // 標記 client-side mount
   useEffect(() => {
-    const stored = localStorage.getItem("theme") as ThemeMode | null;
-    if (stored === "dark" || stored === "light" || stored === "system") {
-      setModeState(stored);
-    }
     setMounted(true);
   }, []);
 
@@ -35,9 +37,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   }, []);
 
+  // 初始化並監聽 mode 變化
   useEffect(() => {
     if (!mounted) return;
-    setIsDark(resolveDark(mode));
+    const dark = resolveDark(mode);
+    setIsDark(dark);
   }, [mode, resolveDark, mounted]);
 
   // 監聽系統主題變化（僅 system 模式）

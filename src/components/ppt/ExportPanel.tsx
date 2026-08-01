@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
@@ -39,6 +40,7 @@ export default function ExportPanel({ open, onClose }: ExportPanelProps) {
     try {
       switch (format) {
         case "html": {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setPreview(exportToHTML(doc));
           break;
         }

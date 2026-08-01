@@ -452,12 +452,13 @@ function ContinuousBeamSVG({
   const plotLeft = PAD.left;
 
   const totalLength = result.spans.reduce((sum, s) => sum + s.L, 0);
-  let currentX = 0;
-  const spanStarts = result.spans.map((span) => {
-    const start = currentX;
-    currentX += span.L;
-    return start;
-  });
+  const spanStarts = result.spans.reduce(
+    (starts, span, i) => {
+      if (i === 0) return [0];
+      return [...starts, starts[i - 1] + result.spans[i - 1].L];
+    },
+    [] as number[]
+  );
 
   const scaleX = (x: number) => plotLeft + (x / totalLength) * plotW;
 

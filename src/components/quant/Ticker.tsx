@@ -21,13 +21,11 @@ interface TickerProps {
  * 支援高亮當前選中交易對
  */
 export default function Ticker({ activeSymbol }: TickerProps) {
-  const [pairs, setPairs] = useState<TickerItem[]>([]);
+  const [pairs, setPairs] = useState<TickerItem[]>(() => generatePairs());
   const [isLive, setIsLive] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setPairs(generatePairs());
-
     const interval = setInterval(() => {
       if (isLive) {
         setPairs(generatePairs());

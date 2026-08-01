@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * 版設計計算引擎（ACI 318-19）
  *

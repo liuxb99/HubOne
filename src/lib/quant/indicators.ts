@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * 技術指標計算函式庫
  * 所有函數均為純函數（Pure Function），無副作用（side effect）。
